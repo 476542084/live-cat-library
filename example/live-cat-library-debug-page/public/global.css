@@ -1,0 +1,109 @@
+@charset "UTF-8";
+html {
+  font-family: -apple-system, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
+    'Helvetica Neue', Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    'Segoe UI Symbol';
+  text-rendering: optimizeLegibility;
+  -ms-overflow-style: scrollbar;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: black;
+  width: 100%;
+  height: 100%;
+}
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+input[required] + label:before {
+  content: '*';
+  color: red;
+}
+/*css 初始化 */
+html,
+body,
+ul,
+li,
+ol,
+dl,
+dd,
+dt,
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+form,
+fieldset,
+legend,
+img {
+  margin: 0;
+  padding: 0;
+}
+
+fieldset,
+img,
+input,
+video,
+button {
+  /*fieldset组合表单中的相关元素*/
+  border: none;
+  padding: 0;
+  margin: 0;
+  outline: none;
+  outline-style: none;
+}
+video:focus {
+  outline: none;
+}
+ul,
+ol {
+  list-style: none; /*清除列表风格*/
+}
+
+input {
+  padding-top: 0;
+  padding-bottom: 0;
+  font-family: 'SimSun', '宋体';
+}
+
+select,
+input {
+  vertical-align: middle;
+}
+
+textarea {
+  resize: none;
+}
+
+/*防止多行文本框拖动*/
+img {
+  border: 0;
+  vertical-align: middle;
+}
+
+/*  去掉图片低测默认的3像素空白缝隙*/
+table {
+  border-collapse: collapse; /*合并外边线*/
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  text-decoration: none;
+  font-weight: normal;
+  font-size: 100%;
+}
+
+s,
+i,
+em {
+  font-style: normal;
+  text-decoration: none;
+}
