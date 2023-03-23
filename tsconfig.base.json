@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    // Language and Environment
+    "target": "es5",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    // Modules
+    "module": "esnext",
+    "moduleResolution": "node",
+    // Emit
+    "importHelpers": true,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "downlevelIteration": true,
+    "importsNotUsedAsValues": "error",
+    // Interop Constraints
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    // Type Checking
+    "strict": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    // Completeness
+    "skipLibCheck": true
+  }
+}

@@ -1,0 +1,23 @@
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dependency directories
+node_modules
+
+# dotenv environment variables file
+.env
+
+# Mac files
+.DS_Store
+
+#.husky message
+.husky/prepare-commit-msg
+
+# Build directory and file
+build
+typedoc/*
+!.gitkeep
+target.tar
