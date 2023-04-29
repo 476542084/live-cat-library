@@ -20,15 +20,31 @@ const input = `${SOURCE_DIR}/index.ts`;
 function createBanner(packageName, version) {
   return `/* ${packageName} v${version} @license MIT */`;
 }
+
+const onWarn = (warning, handler) => {
+  const { code } = warning;
+  const _warning = [
+    "a11y-invalid-attribute",
+    "css-unused-selector",
+    "a11y-label-has-associated-control",
+    "unused-export-let",
+    "a11y-missing-attribute",
+    "a11y-missing-content",
+    "a11y-mouse-events-have-key-events",
+  ];
+  if (_warning.includes(code)) return;
+
+  handler(warning);
+};
+
 function liveCatLirary(output) {
   const OUTPUT_DIR = `${output}/live-cat-library`;
   const basePluginList = [
     svelte({
       preprocess: sveltePreprocess({
         sourceMap: !MODE_PROD,
-        postcss: true,
       }),
-      emitCss: false
+      emitCss: false,
     }),
     image(),
     replace({
@@ -51,6 +67,7 @@ function liveCatLirary(output) {
    * @type {import('rollup').RollupOptions}
    */
   const modules = {
+    onwarn: onWarn,
     input,
     output: [
       {
@@ -80,6 +97,7 @@ function liveCatLirary(output) {
    * @type {import('rollup').RollupOptions}
    */
   const umdModules = {
+    onwarn: onWarn,
     input,
     output: {
       file: path.join(OUTPUT_DIR, liveCatLiraryPKG.browser),
