@@ -14,7 +14,7 @@
   export let showDefaultLoading: boolean;
   $: currentLoadingBgImage =
     $windowOrientation === "landscape"
-      ? loadingBgImage.landscape
+       ? loadingBgImage.landscape
       : loadingBgImage.portrait;
   $: backgroundStyle = !!currentLoadingBgImage
     ? `url(${currentLoadingBgImage}) center center / cover`

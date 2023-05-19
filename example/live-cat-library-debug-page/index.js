@@ -1,7 +1,7 @@
-import { Loading } from "live-cat-library";
+import { LoadingCompoent } from "live-cat-library";
 let loadingCompoent = "";
 window.addEventListener("DOMContentLoaded", () => {
-  loadingCompoent = new Loading(
+  loadingCompoent = new LoadingCompoent(
     document.body,
     {
       // loadingImage:

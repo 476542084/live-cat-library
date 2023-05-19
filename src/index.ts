@@ -1,1 +1,2 @@
-export { LoadingCompoent as Loading  } from "./loading";
+export { LoadingCompoent } from "./loading";
+export { LauncherUI } from "./launcher-ui";

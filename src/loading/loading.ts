@@ -10,12 +10,12 @@ export interface Options {
   enabledPlayButton: boolean;
 }
 
-interface ChangedOptions {
+export interface ChangedOptions {
   phaseChanged: boolean;
   percentChanged: boolean;
 }
 
-interface OnChange {
+export interface OnChange {
   phase: Phase;
   fakePercent: number;
   deltaTime: number;
@@ -37,7 +37,7 @@ export class LoadingCompoent {
   private loadingCompoent: Loading;
   private options: Options;
   private changedOptions: ChangedOptions;
-  private onChange: (cb: OnChange) => void;
+  // private onChange: (cb: OnChange) => void;
 
   // @see https://github.com/rbuckton/reflect-metadata, but decorators are not stableable
   private _deltaTimeMetadata: number;
@@ -61,17 +61,16 @@ export class LoadingCompoent {
     return this._percent;
   }
   constructor(
-    container: HTMLElement,
-    options: Options,
-    changedOptions: ChangedOptions,
-    onChange: (cb: OnChange) => void
+    protected container: HTMLElement,
+    options: Partial<Options>,
+    protected onChange: (cb: OnChange) => void,
+    changedOptions?: Partial<ChangedOptions>
   ) {
     this.options = { ...LoadingCompoent.defaultOptions, ...options };
     this.changedOptions = {
       ...LoadingCompoent.defaultChangedOptions,
       ...changedOptions,
     };
-    this.onChange = onChange;
     this.changePhase("initial");
     this._deltaTimeMetadata = performance.now();
     const {
@@ -91,7 +90,7 @@ export class LoadingCompoent {
       },
     });
   }
-  protected showLoadingText(text: string, showPercent: boolean) {
+  showLoadingText(text: string, showPercent: boolean) {
     showFakePercent.set(this.options.showFakePercent || showPercent);
     loadingText.set(text);
   }

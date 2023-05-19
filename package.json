@@ -10,7 +10,7 @@
   "author": "jim <huangzhimou1996@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "build": "rollup -c rollup.config.js --environment NODE_ENV:production",
+    "build": "rollup -c rollup.config.js -w --environment NODE_ENV:production",
     "dev": "rollup -c  rollup.config.js -w --environment NODE_ENV:development"
   },
   "keywords": [
@@ -49,6 +49,7 @@
   },
   "dependencies": {
     "countup.js": "^2.6.0",
+    "js-base64": "^3.7.5",
     "rxjs": "7.4.0"
   }
 }

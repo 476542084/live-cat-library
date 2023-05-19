@@ -5,7 +5,9 @@ import type {
   BaseOptionsType,
   DesignInfo,
   PrivateStartInfo,
+  InitializeConfigType,
 } from "./interface";
+import { decode } from "js-base64";
 function stringifyQuery(query: any) {
   return Object.keys(query)
     .reduce((ary, key) => {
@@ -21,7 +23,6 @@ function stringifyQuery(query: any) {
     .join("&");
 }
 export class Client {
-  public taskId?: number;
   constructor(private address: string) {}
   async statusPrivate(params: {
     token: string;
@@ -35,11 +36,14 @@ export class Client {
       }
     ).then((response) => response.json());
   }
-  async status(token?: string): Promise<StatusResponse> {
+  async status(params: {
+    taskId: string;
+    token?: number;
+  }): Promise<StatusResponse> {
     return fetch(
-      `${this.address}/api/3dcat/application/running/status/${this.taskId}${
-        !!token ? `?token=${token}` : ""
-      }`,
+      `${this.address}/api/3dcat/application/running/status?${stringifyQuery(
+        params
+      )}`,
       {
         method: "GET",
       }
@@ -61,7 +65,9 @@ export class Client {
     }).then((response) => response.json());
   }
 
-  async getPlayerUrl(params: BaseOptionsType): Promise<CommonResponse<string>> {
+  async getPlayerUrl(
+    params: BaseOptionsType
+  ): Promise<CommonResponse<InitializeConfigType>> {
     const { address, ...currentParams } = params;
     return fetch(
       `${this.address}/api/3dcat/application/playerUrl?${stringifyQuery(
@@ -70,7 +76,18 @@ export class Client {
       {
         headers: { "Content-Type": "application/json" },
       }
-    ).then((response) => response.json());
+    )
+      .then((response) => response.json())
+      .then((res) => {
+        if (res.code === 200) {
+          let search = new URL(res).search;
+          let config: InitializeConfigType;
+          let configStr = new URLSearchParams(search).get("config");
+          config = JSON.parse(decode(decodeURIComponent(configStr || "")));
+          res.data = config;
+        }
+        return res;
+      });
   }
 
   async getDesignInfo(): Promise<CommonResponse<DesignInfo>> {
