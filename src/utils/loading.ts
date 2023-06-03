@@ -1,11 +1,11 @@
-import Loading from "./loading.svelte";
+import Loading from "../loading/loading.svelte";
 import {
   showFakePercent,
   endPercentNum,
   loadingText,
   currentPercentNum,
 } from "../store";
-import { PhasePercentMap } from "./phase-profile";
+import { PhasePercentMap } from "../loading/phase-profile";
 import type { Phase } from "live-cat/types/launcher-base";
 
 export interface Options {
@@ -14,6 +14,7 @@ export interface Options {
   loadingBarImage: string | HTMLImageElement;
   showDefaultLoading: boolean;
   showFakePercent: boolean;
+  enabledPlayButton: boolean;
 
   phaseChanged: boolean;
   percentChanged: boolean;
@@ -31,6 +32,7 @@ export class LoadingCompoent {
     loadingBarImage: "",
     showDefaultLoading: true,
     showFakePercent: true,
+    enabledPlayButton: false,
 
     phaseChanged: true,
     percentChanged: true,
@@ -100,8 +102,7 @@ export class LoadingCompoent {
     try {
       const [percent, text] = PhasePercentMap.get(phase)!;
       this.phase = phase;
-      // console.log("showFakePercent", this.options.showFakePercent);
-      showFakePercent.set(this.options.showFakePercent); //reset
+      showFakePercent.set(this.options.showFakePercent!); //reset
       endPercentNum.set(percent);
       loadingText.set(text);
     } catch {

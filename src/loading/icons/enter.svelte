@@ -2,7 +2,7 @@
   import IconBase from "./icon-base.svelte";
 </script>
 
-<IconBase {...$$restProps} w={18} h={18}>
+<IconBase {...$$restProps} w={36} h={36} width={18}>
   <path
     d="M12.1152 18.1756L4.00095 25.3513L4.00095 11L12.1152 18.1756Z"
     fill="white"

@@ -1,3 +1,4 @@
+import { iceParse, isTouch } from "../utils";
 import type {
   StatusResponse,
   CommonResponse,
@@ -34,20 +35,35 @@ export class Client {
       {
         method: "GET",
       }
-    ).then((response) => response.json());
+    )
+      .then((response) => response.json())
+      .then((res) => {
+        if (res.result && res.data.coturns) {
+          try {
+            res.data.coturns = iceParse(res.data.coturns);
+          } catch (_) {}
+        }
+        return res;
+      });
   }
-  async status(params: {
-    taskId: string;
-    token?: number;
-  }): Promise<StatusResponse> {
+  async status(taskId: number, token?: number): Promise<StatusResponse> {
     return fetch(
-      `${this.address}/api/3dcat/application/running/status?${stringifyQuery(
-        params
-      )}`,
+      `${this.address}/api/3dcat/application/running/status/${taskId}${
+        !!token ? `?token=${token}` : ""
+      }`,
       {
         method: "GET",
       }
-    ).then((response) => response.json());
+    )
+      .then((response) => response.json())
+      .then((res) => {
+        if (res.result && res.data.coturns) {
+          try {
+            res.data.coturns = iceParse(res.data.coturns);
+          } catch (_) {}
+        }
+        return res;
+      });
   }
   /**
    * stop app with spectify runningId or token
@@ -65,6 +81,28 @@ export class Client {
     }).then((response) => response.json());
   }
 
+  async getAppConfig(
+    params: BaseOptionsType
+  ): Promise<CommonResponse<InitializeConfigType>> {
+    const { address, ...currentParams } = params;
+    return fetch(
+      `${this.address}/api/3dcat/application/appConfig?${stringifyQuery(
+        currentParams
+      )}`,
+      {
+        headers: { "Content-Type": "application/json" },
+      }
+    )
+      .then((response) => response.json())
+      .then((res) => {
+        if (res.result) {
+          res.data = this.handlerAppConfig(res.data);
+        }
+        // console.info(`return /api/3dcat/application/appConfig`, res.data);
+        return res;
+      });
+  }
+
   async getPlayerUrl(
     params: BaseOptionsType
   ): Promise<CommonResponse<InitializeConfigType>> {
@@ -79,13 +117,10 @@ export class Client {
     )
       .then((response) => response.json())
       .then((res) => {
-        if (res.code === 200) {
-          let search = new URL(res).search;
-          let config: InitializeConfigType;
-          let configStr = new URLSearchParams(search).get("config");
-          config = JSON.parse(decode(decodeURIComponent(configStr || "")));
-          res.data = config;
+        if (res.result) {
+          res.data = this.handlerAppConfig(res.data);
         }
+        // console.info(`return /api/3dcat/application/playerUrl`, res.data);
         return res;
       });
   }
@@ -93,7 +128,55 @@ export class Client {
   async getDesignInfo(): Promise<CommonResponse<DesignInfo>> {
     return fetch(`${this.address}/siteDesign/info`, {
       headers: { "Content-Type": "application/json" },
-    }).then((response) => response.json());
+    })
+      .then((response) => response.json())
+      .then((res) => {
+        if (res.result) {
+          try {
+            let {
+              backgroundImagePc = "",
+              backgroundImageH5 = "",
+              loadingImage = "",
+              toolbarLogo = "",
+              browserIco = "",
+              logo = "",
+            } = res.data;
+            loadingImage = loadingImage
+              ? `${this.address}/${loadingImage}`
+              : "";
+
+            //重写横竖屏背景，不同端切换，背景图不会变更,私有化没有横竖屏
+            let verticalLoading = isTouch()
+              ? backgroundImageH5
+              : backgroundImagePc;
+            let horizontalLoading = isTouch()
+              ? backgroundImageH5
+              : backgroundImagePc;
+
+            verticalLoading = verticalLoading
+              ? `${this.address}/${verticalLoading}`
+              : "";
+            horizontalLoading = horizontalLoading
+              ? `${this.address}/${horizontalLoading}`
+              : "";
+
+            toolbarLogo = toolbarLogo ? `${this.address}/${toolbarLogo}` : "";
+
+            browserIco = browserIco ? `${this.address}/${browserIco}` : "";
+            logo = logo ? `${this.address}/${logo}` : "";
+            res.data = {
+              ...res.data,
+              horizontalLoading,
+              verticalLoading,
+              toolbarLogo,
+              loadingImage,
+              browserIco,
+              logo,
+            };
+          } catch (_) {}
+        }
+        return res;
+      });
   }
 
   async getPlayerUrlPrivate(
@@ -105,5 +188,57 @@ export class Client {
       body: JSON.stringify(currentParams),
       headers: { "Content-Type": "application/json" },
     }).then((response) => response.json());
+  }
+
+  handlerAppConfig(data: URL) {
+    let res;
+    try {
+      let search = new URL(data).search;
+      let config: InitializeConfigType;
+      let configStr = new URLSearchParams(search).get("config");
+      config = JSON.parse(decode(decodeURIComponent(configStr || "")));
+      let {
+        appName = "Player",
+        horizontalLoading,
+        verticalLoading,
+        pcLoading,
+        keyboardMappingConfig,
+        toolbarLogo,
+        loadingImage,
+      } = config;
+
+      horizontalLoading = horizontalLoading
+        ? `${this.address}${horizontalLoading}`
+        : "";
+      verticalLoading = verticalLoading
+        ? `${this.address}${verticalLoading}`
+        : "";
+
+      //pc 背景图
+      pcLoading = pcLoading ? `${this.address}${pcLoading}` : "";
+
+      toolbarLogo = toolbarLogo ? `${this.address}${toolbarLogo}` : "";
+      loadingImage = loadingImage ? `${this.address}${loadingImage}` : "";
+
+      //重写横竖屏背景，不同端切换，背景图不会变更
+      verticalLoading = isTouch() ? verticalLoading : pcLoading;
+      horizontalLoading = isTouch() ? horizontalLoading : pcLoading;
+
+      keyboardMappingConfig =
+        keyboardMappingConfig &&
+        typeof keyboardMappingConfig === "string" &&
+        JSON.parse(keyboardMappingConfig);
+
+      res = {
+        ...config,
+        appName,
+        keyboardMappingConfig,
+        horizontalLoading,
+        verticalLoading,
+        toolbarLogo,
+        loadingImage,
+      };
+    } catch (_) {}
+    return res;
   }
 }

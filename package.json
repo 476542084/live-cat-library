@@ -1,6 +1,6 @@
 {
   "name": "live-cat-library",
-  "version": "0.1.0.beta.0",
+  "version": "0.1.1",
   "description": "This is a component library for [3DCAT](https://www.3dcat.live/)",
   "types": "./types",
   "main": "./live-cat-library.cjs.js",
@@ -10,7 +10,8 @@
   "author": "jim <huangzhimou1996@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "build": "rollup -c rollup.config.js -w --environment NODE_ENV:production",
+    "prebuild": "rm -rf ./build/*  ",
+    "build": "rollup -c rollup.config.js  --environment NODE_ENV:production",
     "dev": "rollup -c  rollup.config.js -w --environment NODE_ENV:development"
   },
   "keywords": [
@@ -19,24 +20,24 @@
     "live-cat-library"
   ],
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^24.0.1",
-    "@rollup/plugin-image": "^3.0.2",
-    "@rollup/plugin-node-resolve": "^15.0.1",
+    "@rollup/plugin-commonjs": "^21.0.1",
+    "@rollup/plugin-image": "^2.1.1",
+    "@rollup/plugin-node-resolve": "^13.0.6",
     "@rollup/plugin-replace": "^5.0.2",
     "@rollup/plugin-strip": "^3.0.2",
-    "@rollup/plugin-typescript": "^11.0.0",
+    "@rollup/plugin-typescript": "^8.3.0",
     "autoprefixer": "^10.4.14",
     "cssnano": "^5.1.15",
     "lint-staged": ">=10",
     "postcss": "^8.4.21",
     "prettier": "^2.8.6",
-    "prettier-plugin-svelte": "^2.9.0",
+    "prettier-plugin-svelte": "^2.6.0",
     "rollup": "2.78.0",
     "rollup-plugin-copy": "^3.4.0",
     "rollup-plugin-svelte": "^7.1.4",
     "rollup-plugin-terser": "^7.0.2",
     "svelte": "3.57.0",
-    "svelte-preprocess": "^5.0.3",
+    "svelte-preprocess": "^4.10.4",
     "svelte-viewport-info": "^1.0.0",
     "tslib": "^2.5.0",
     "typescript": "4.9.5"
@@ -50,6 +51,11 @@
   "dependencies": {
     "countup.js": "^2.6.0",
     "js-base64": "^3.7.5",
-    "rxjs": "7.4.0"
+    "live-cat": "^1.0.0"
+  },
+  "peerDependencies": {
+    "countup.js": "^2.6.0",
+    "js-base64": "^3.7.5",
+    "live-cat": "^1.0.0"
   }
 }

@@ -1,3 +1,4 @@
+import type { StartType } from "live-cat/types/launcher-base";
 export enum RateLevel {
   SD,
   HD,
@@ -30,7 +31,7 @@ export interface PrivateStartInfo {
 }
 
 export interface CommonResponse<T = any> {
-  code: string;
+  code: number;
   data: T;
   message: string;
   result: boolean;
@@ -92,17 +93,12 @@ export interface VirtualGlobalType {
   portrait: VirtualDataType[];
 }
 
-export enum StartType {
-  Normal = 1,
-  VR,
-  Screen,
-}
 export interface BaseOptionsType {
   address: string; // address
   appId?: string; // appId
   appKey?: string; // appKey
   appSecret?: string; // appSecret
-  isScreenMode: boolean;
+  startType?: StartType;
   castScreenMaxQty?: number; // 并发数
   castScreenNickname?: string; // 投屏昵称
   castScreenPwd?: string; // 投屏密码
@@ -158,7 +154,7 @@ export interface StatusInterface {
   signaling: string;
   ice: string[];
   rank: number;
-  agoraServiceVerify?: string;
+  agoraServiceVerify: string;
 }
 export interface StatusPrivateInterface
   extends Omit<StatusInterface, "status"> {
@@ -172,25 +168,22 @@ export type InitializeConfigType = {
   taskId: number;
   inputHoverButton?: InputHoverButton;
   keyboardMappingConfig: undefined | VirtualGlobalType;
-  loadingMobileImage?: string;
-  loadingPcImage?: string;
-  horizontalLoading?: string; //新版 loading 移动端横屏字段
-  verticalLoading?: string; //新版 loading 移动端竖屏字段
-  pcLoading?: string; //新版 loading PC 端字段
-  loadingImage?: string; //loading 加载中的图，在公有云中包括无背景图时的中间图标、及有背景图时进度条左边的小图标
-  loadingBgImage?: string;
-  settingHoverButton: VirtualControlDisplayType;
+  horizontalLoading: string; //新版 loading 移动端横屏字段
+  verticalLoading: string; //新版 loading 移动端竖屏字段
+  pcLoading: string; //新版 loading PC 端字段
+  loadingImage: string; //loading 加载中的图，在公有云中包括无背景图时的中间图标、及有背景图时进度条左边的小图标
+  settingHoverButton?: VirtualControlDisplayType;
   token?: string;
   needLandscape?: boolean; //是否初始化横屏
   landscapeType?: LandscapeType; //初始化显示模式
   toolbarLogo?: string; //猫头图标
-  showCastScreenUsers?: boolean; //投屏时显示用户列表
-  openMicrophone?: boolean;
-  openMultiTouch?: boolean;
+  showCastScreenUsers: boolean; //投屏时显示用户列表
+  openMicrophone: boolean;
+  openMultiTouch: boolean;
   rateLevel?: RateLevel;
   agoraServiceVerify?: string;
-  coturns: string[];
-  signaling: string;
+  isFullScreen: boolean; //是否自动全屏
+  isReconnectEnabled: boolean; //是否自动重连
 };
 
 /**
@@ -213,6 +206,8 @@ export interface DesignInfo {
   toolbarLogo: string;
   browserIco: string;
   logo: string;
+  horizontalLoading?: string; //预留横竖屏
+  verticalLoading?: string; //预留横竖屏
 }
 
 export enum ToolsPlatformType {

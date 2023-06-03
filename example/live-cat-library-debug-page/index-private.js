@@ -1,20 +1,17 @@
 // import { LoadingCompoent } from "live-cat-library";
-import { LauncherUI } from "live-cat-library";
+import { LauncherPrivateUI } from "live-cat-library";
 
-const container = document.createElement("div");
-container.style.width = "100%";
-container.style.height = "100%";
-container.style.margin = "auto";
-document.body.appendChild(container);
+const hostElement = document.querySelector("body");
+document.querySelector("body").style.width = "100%";
+document.querySelector("body").style.height = "100%";
 
 function bootstrap() {
-  let launcherUI = new LauncherUI(
+  let launcherPrivateUI = new LauncherPrivateUI(
     {
-      address: "https://app.3dcat.live",
-      appKey: "RR8DtBxQ7t8Qp90W", //unity 多点
-      // appKey: "kLofk3YjeQMIILqQ", //ue 多点
+      address: "http://172.16.21.240:8088",
+      appKey: "zrGlwpNf8TxkMOAb",
     },
-    container,
+    hostElement,
     {
       onPlay: () => {
         console.log("player---------");
@@ -53,7 +50,7 @@ function bootstrap() {
       },
     }
   );
-  window.launcher = launcherUI;
+  window.launcher = launcherPrivateUI;
 }
 
 window.addEventListener("DOMContentLoaded", () => {

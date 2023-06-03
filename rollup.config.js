@@ -81,6 +81,10 @@ function liveCatLirary(output) {
         banner: createBanner(liveCatLiraryPKG.name, liveCatLiraryPKG.version),
       },
     ],
+    // external: [
+    //   ...Object.keys(liveCatLiraryPKG.dependencies || {}),
+    //   ...Object.keys(liveCatLiraryPKG.peerDependencies || {}),
+    // ],
     plugins: [
       ...basePluginList,
       copy({
@@ -115,7 +119,8 @@ export default (cliArgs) => {
   const OUTPUT_PATH = MODE_PROD
     ? "build"
     : path.join(
-        configDebugPath || "example/live-cat-library-debug-page",
+        // configDebugPath || "example/live-cat-library-debug-page",
+        configDebugPath || "../3dcat-player-gather",
         "node_modules"
       );
   const builds = [...liveCatLirary(OUTPUT_PATH)] || [];

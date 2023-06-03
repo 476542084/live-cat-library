@@ -1,3 +1,5 @@
+<svelte:options accessors={true} />
+
 <script lang="ts">
   import type { Options } from "./loading";
   import DefaultLoading from "./icons/3dcat-loading.svelte";
@@ -6,7 +8,7 @@
   import LoadingText from "./components/loading-text.svelte";
   import LoadingBar from "./components/loading-bar.svelte";
   import Portal from "../components/portal.svelte";
-  import { showEnterButton, windowOrientation } from "../store";
+  import { autoLoadingVideo, windowOrientation } from "../store";
 
   export let loadingImage: string | HTMLImageElement;
   export let loadingBgImage: Options["loadingBgImage"];
@@ -14,7 +16,7 @@
   export let showDefaultLoading: boolean;
   $: currentLoadingBgImage =
     $windowOrientation === "landscape"
-       ? loadingBgImage.landscape
+      ? loadingBgImage.landscape
       : loadingBgImage.portrait;
   $: backgroundStyle = !!currentLoadingBgImage
     ? `url(${currentLoadingBgImage}) center center / cover`
@@ -39,9 +41,11 @@
       {:else if showDefaultLoading}
         <DefaultLoading />
         <LoadingText />
+      {:else}
+        <LoadingText />
       {/if}
 
-      {#if $showEnterButton}
+      {#if !$autoLoadingVideo}
         <EnterButton hasLoadingBgImage={!!loadingBgImage} />
       {/if}
     </div>
