@@ -98,7 +98,6 @@ export class Client {
         if (res.result) {
           res.data = this.handlerAppConfig(res.data);
         }
-        // console.info(`return /api/3dcat/application/appConfig`, res.data);
         return res;
       });
   }
@@ -120,7 +119,6 @@ export class Client {
         if (res.result) {
           res.data = this.handlerAppConfig(res.data);
         }
-        // console.info(`return /api/3dcat/application/playerUrl`, res.data);
         return res;
       });
   }

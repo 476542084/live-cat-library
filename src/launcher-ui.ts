@@ -27,7 +27,7 @@ import type { Options as loadingOptions } from "./loading/loading";
 import { AutoRetry } from "./utils/auto-retry";
 interface LoadingError {
   code: number | string;
-  type: "app" | "task" | "connection";
+  type: "app" | "task" | "connection" | "reConnection";
   reason: string | ErrorState;
 }
 
@@ -71,6 +71,10 @@ export class LauncherUI {
   private startClient?: Promise<StartClient>;
   private diffServerAndDiyOptions?: Options;
   private autoRetry: AutoRetry;
+  private isReconnectEnabled: boolean = false;
+  private taskId?: number;
+  private offline: boolean = false;
+  private tempOption?: InitializeConfigType;
   constructor(
     protected baseOptions: BaseOptionsType,
     protected hostElement: HTMLElement,
@@ -78,104 +82,92 @@ export class LauncherUI {
   ) {
     this.extendUIOptions = { ...LauncherUI.defaultExtendOptions, ...options };
 
-    this.loading = new LoadingCompoent(this.hostElement, {}, (cb: OnChange) => {
-      this.extendUIOptions.onChange(cb);
-    });
+    this.loading = new LoadingCompoent(
+      this.hostElement,
+      { showDefaultLoading: false },
+      (cb: OnChange) => {
+        this.extendUIOptions.onChange(cb);
+      }
+    );
 
     this.client = new Client(baseOptions.address);
 
     this.autoRetry = new AutoRetry(this.baseOptions.appKey!);
 
     //判断有重连重连 - 仅普通连接
-    if (this.baseOptions.startType === 1 && !this.autoRetry.isEmpty()) {
-      this.startClient = this.client
-        .getAppConfig(this.baseOptions)
-        .then(async (res) => {
-          if (!res.result) {
-            this.handlerError({
-              code: res.code,
-              type: "app",
-              reason: StatusMap.get(res.code) || res.message,
-            });
-            throw res.code;
-          }
-          return res.data;
-        })
-        .then((data) => {
-          this.handlerMultipleOptions(data);
-          const { taskId } = this.autoRetry.getRetryInfo()!;
-          const { isReconnectEnabled } = data;
-          //如果重连进去后服务器去掉了重连配置
-          // !isReconnectEnabled && this.autoRetry.clearRetryInfo();
-          this.autoRetry.clearRetryInfo();
-          isReconnectEnabled && this.autoRetry.initializeRetryInfo(taskId);
 
-          this.options?.onTaskId && this.options.onTaskId(taskId);
-          return { taskId, isReconnectEnabled };
-        });
-    } else {
-      //正常连接
-      this.startClient = this.client
-        .getPlayerUrl(this.baseOptions)
-        .then(async (res) => {
-          if (!res.result) {
-            this.handlerError({
-              code: res.code,
-              type: "app",
-              reason: StatusMap.get(res.code) || res.message,
-            });
-            throw res.code;
-          }
-          return res.data;
-        })
-        .then((data) => {
-          this.handlerMultipleOptions(data);
-          const { taskId, isReconnectEnabled } = data;
-          //重连配置判断：
-          this.autoRetry.clearRetryInfo();
-          isReconnectEnabled && this.autoRetry.initializeRetryInfo(taskId);
-
-          this.options?.onTaskId && this.options.onTaskId(taskId);
-          return { taskId, isReconnectEnabled };
-        });
-    }
     this.handlerStart();
   }
   private handlerNetworkChange = () => {
-    (navigator as any).connection.removeEventListener(
-      "change",
-      this.handlerNetworkChange
-    );
-    console.info("切换网络了");
+    if ("connection" in navigator) {
+      (navigator as any).connection.removeEventListener(
+        "change",
+        this.handlerNetworkChange
+      );
+    }
+
+    this.offline = true;
     this.handlerRetryAction();
   };
 
   private handlerOffline = () => {
     window.removeEventListener("offline", this.handlerOffline);
-    console.info("断网了");
+    this.offline = true;
     this.handlerRetryAction();
   };
 
   private handlerRetryAction() {
     const { count } = this.autoRetry.getRetryInfo()!;
-    this.launcherBase?.player.destory();
     this.launcherBase?.playerShell.destory();
+    this.launcherBase?.player.destory();
     this.destory();
-    // console.log("销毁player", +new Date() / 1000);
+
     //重新loading
-    this.loading = new LoadingCompoent(this.hostElement, {}, (cb: OnChange) => {
-      this.extendUIOptions.onChange(cb);
-    });
-    if (count > AutoRetry.MaxCount) {
-      this.loading.showLoadingText("网络连接异常，请稍后重试", false);
-      this.autoRetry.clearRetryInfo();
+    this.loading = new LoadingCompoent(
+      this.hostElement,
+      { showDefaultLoading: false },
+      (cb: OnChange) => {
+        this.extendUIOptions.onChange(cb);
+      }
+    );
+    const { loadingImage, verticalLoading, horizontalLoading } =
+      this.tempOption!;
+    this.loading.loadingCompoent.loadingImage =
+      this.options?.loadingImage || loadingImage!;
+
+    this.loading.loadingCompoent.loadingBgImage = {
+      portrait: this.options?.loadingBgImage?.portrait || verticalLoading!,
+      landscape: this.options?.loadingBgImage?.landscape || horizontalLoading!,
+    };
+
+    this.loading.loadingCompoent.loadingBarImage =
+      this.options?.loadingImage || loadingImage!;
+
+    this.loading.loadingCompoent.showDefaultLoading =
+      this.options?.showDefaultLoading ?? true;
+
+    //第一次马上重连
+    if (count === 1) {
+      this.autoRetry.increaseRetryCount();
+      this.handlerStart();
       return;
     }
+    if (this.autoRetry.isOverMaxCount) {
+      this.loading.showLoadingText("网络连接异常，请稍后重试", false);
+      return;
+    }
+
     this.loading.showLoadingText(
       `当前网络异常，正在尝试重连...(${count}/${AutoRetry.MaxCount})`,
       false
     );
-    this.handlerEntryConnetion();
+    const increaseRetryRes = this.autoRetry.increaseRetryCount();
+    if (increaseRetryRes) {
+      this.handlerEntryConnetion();
+    } else {
+      this.loading.showLoadingText("网络连接异常，请稍后重试", false);
+      return;
+    }
   }
   private handlerMultipleOptions(data: InitializeConfigType) {
     const {
@@ -191,7 +183,9 @@ export class LauncherUI {
       inputHoverButton,
       token,
       isFullScreen,
+      openMicrophone,
     } = data;
+    this.tempOption = data;
     document.title = appName;
     this.token = token;
 
@@ -201,7 +195,8 @@ export class LauncherUI {
     this.diffServerAndDiyOptions = {
       ...LauncherBase.defaultOptions,
       ...this.options,
-      isFullScreen,
+      isFullScreen: this.options?.isFullScreen || isFullScreen!,
+      openMicrophone: this.options?.openMicrophone || openMicrophone!,
       landscapeType: this.options?.landscapeType || landscapeType!,
       needLandscape: this.options?.needLandscape || needLandscape!,
       settingHoverButton:
@@ -221,7 +216,11 @@ export class LauncherUI {
 
     this.loading.loadingCompoent.loadingBarImage =
       this.options?.loadingImage || loadingImage!;
+
+    this.loading.loadingCompoent.showDefaultLoading =
+      this.options?.showDefaultLoading ?? true;
   }
+
   private waitForRunning = async (
     taskId: number
   ): Promise<StatusResponse["data"]> => {
@@ -235,6 +234,7 @@ export class LauncherUI {
   ) => {
     const { status } = res.data;
     if (status === Status.QueueWaiting) {
+      //Todo: 排队时候网络异常，触发重连，需要取消上一次轮训排队
       this.loading.showLoadingText(
         `当前排在第 ${res.data.rank ?? 0} 位，请耐心等待...`,
         false
@@ -269,12 +269,16 @@ export class LauncherUI {
         const options = {
           ...this.diffServerAndDiyOptions,
           autoLoadingVideo: isAutoLoadingVideo,
+          onQuit: () => {
+            //主动退出，清除taskId缓存
+            this.autoRetry.clearRetryInfo();
+          },
           onPhaseChange: (phase: Phase, deltaTime: number) => {
             this.options?.onPhaseChange &&
               this.options.onPhaseChange(phase, deltaTime);
             this.loading.changePhase(phase);
 
-            if (phase === "streaming-ready" && !isAutoLoadingVideo) {
+            if (phase === "data-channel-open" && !isAutoLoadingVideo) {
               autoLoadingVideo.set(false);
               autoLoadingVideoHandler.set(() => {
                 this.launcherBase?.resumeVideoStream();
@@ -283,6 +287,12 @@ export class LauncherUI {
           },
           onPlay: () => {
             this.options?.onPlay && this.options?.onPlay();
+            //只要进来，初始化重连缓存
+            //去掉可以测试重连失败多次
+            this.offline = false;
+            if (this.isReconnectEnabled && !this.autoRetry.isEmpty) {
+              this.autoRetry.setupCount(1);
+            }
             this.loading.destroy();
           },
           onError: (reason: ErrorState) => {
@@ -348,6 +358,55 @@ export class LauncherUI {
     }
   };
   private handlerError(err: LoadingError) {
+    if (
+      this.isReconnectEnabled &&
+      !this.autoRetry.isEmpty &&
+      err.type === "connection" &&
+      err.code === "disconnect"
+    ) {
+      //在网络不稳定/断网的情况下，需要对重连进行适配
+      this.offline = true; //设定为断网
+      const { taskId } = this.autoRetry.getRetryInfo()!;
+      this.handlerDetectTaskIsRunning(taskId)
+        .then((res) => {
+          if (res.result) {
+            //taskId关联进程还在运行
+            this.handlerRetryAction();
+          } else {
+            //断网的情况下重连/服务错误
+            this.handlerRetryAction();
+          }
+        })
+        .catch(() => {
+          this.handlerRetryAction();
+        });
+
+      return;
+    }
+    if (
+      !this.autoRetry.isEmpty &&
+      err.type !== "connection" &&
+      err.type !== "task"
+    ) {
+      //重连
+      this.extendUIOptions.onLoadingError({
+        code: err.code,
+        type: "reConnection",
+        reason: err.reason,
+      });
+
+      this.loading = new LoadingCompoent(
+        this.hostElement,
+        {},
+        (cb: OnChange) => {
+          this.extendUIOptions.onChange(cb);
+        }
+      );
+      setTimeout(() => {
+        this.handlerStart();
+      });
+      return;
+    }
     this.loading.loadingCompoent.showDefaultLoading = false;
     this.loading.showLoadingText(err.reason, false);
     this.extendUIOptions.onLoadingError({
@@ -355,24 +414,111 @@ export class LauncherUI {
       type: err.type,
       reason: err.reason,
     });
-    if (err.code === 60 && !this.autoRetry.isEmpty()) {
-      // this.handlerRetryAction();
-      this.autoRetry.clearRetryInfo();
-      this.handlerStart();
-    }
   }
 
   handlerEntryConnetion() {
     this.autoRetry.handlerSetTimeout(() => {
-      //增加一次
-      this.autoRetry.increaseRetryCount();
-      //倒计完执行
       this.handlerStart();
     });
   }
-
+  private handlerDetectTaskIsRunning(taskId: number) {
+    return new Promise<{ result: boolean; data?: StatusInterface }>((r) => {
+      const res: Promise<StatusResponse> = this.client.status(taskId);
+      res
+        .then((res) => {
+          const { status } = res.data;
+          if (status === Status.Running) {
+            //taskId关联进程还在运行
+            r({ result: true, data: res.data });
+          } else {
+            //实际没有运行
+            r({ result: false, data: res.data });
+          }
+        })
+        .catch(() => r({ result: false }));
+    });
+  }
   private handlerStart() {
+    //Todo：如果有本地缓存
+    if (!this.autoRetry.isEmpty && !this.offline) {
+      const { taskId } = this.autoRetry.getRetryInfo()!;
+      this.handlerDetectTaskIsRunning(taskId).then((res) => {
+        if (res.result) {
+          //taskId关联进程还在运行
+          // this.handlerStatusSwitch(res.data!);
+          this.handlerRun();
+        } else {
+          //实际没有运行清空
+          this.autoRetry.clearRetryInfo();
+          this.handlerStart();
+        }
+      });
+      return;
+    }
+    this.handlerRun();
+  }
+
+  private handlerRun() {
     try {
+      if (this.baseOptions.startType === 1 && !this.autoRetry.isEmpty) {
+        this.startClient = this.client
+          .getAppConfig(this.baseOptions)
+          .then(async (res) => {
+            if (!res.result) {
+              this.handlerError({
+                code: res.code,
+                type: "app",
+                reason: StatusMap.get(res.code) || res.message,
+              });
+              throw res.code;
+            }
+            return res.data;
+          })
+          .then((data) => {
+            this.handlerMultipleOptions(data);
+            const { taskId } = this.autoRetry.getRetryInfo()!;
+            const { isReconnectEnabled } = data;
+
+            if (isReconnectEnabled) {
+              this.autoRetry.initializeRetryInfo(taskId);
+            }
+            this.isReconnectEnabled = isReconnectEnabled;
+
+            this.taskId = taskId;
+            this.options?.onTaskId && this.options.onTaskId(taskId);
+            return { taskId, isReconnectEnabled };
+          });
+      } else {
+        //正常连接
+        this.startClient = this.client
+          .getPlayerUrl(this.baseOptions)
+          .then(async (res) => {
+            if (!res.result) {
+              this.handlerError({
+                code: res.code,
+                type: "app",
+                reason: StatusMap.get(res.code) || res.message,
+              });
+              throw res.code;
+            }
+            return res.data;
+          })
+          .then((data) => {
+            this.handlerMultipleOptions(data);
+            const { taskId, isReconnectEnabled } = data;
+            if (isReconnectEnabled) {
+              this.autoRetry.initializeRetryInfo(taskId);
+            }
+
+            //重连配置判断：
+
+            this.isReconnectEnabled = isReconnectEnabled;
+            this.taskId = taskId;
+            this.options?.onTaskId && this.options.onTaskId(taskId);
+            return { taskId, isReconnectEnabled };
+          });
+      }
+
       this.startClient!.then(({ taskId, isReconnectEnabled }) => {
         if (this.baseOptions.startType === 1 && isReconnectEnabled) {
           window.addEventListener("offline", this.handlerOffline);
@@ -387,10 +533,14 @@ export class LauncherUI {
       })
         .then((res) => this.handlerStatusSwitch(res))
         .catch((res) => {
-          console.log("res----", res);
+          //只有重连以及有命中缓存才会触发 offline 为 true
+          if (this.offline) {
+            //断网了
+            this.handlerRetryAction();
+          }
         });
-    } catch (error) {
-      console.log("error----", error);
+    } catch (_) {
+      console.error(_);
     }
   }
 
@@ -398,12 +548,15 @@ export class LauncherUI {
     text: string = "连接已关闭",
     opt: { videoScreenshot: boolean } = { videoScreenshot: false }
   ) {
-    (navigator as any).connection.removeEventListener(
-      "change",
-      this.handlerNetworkChange
-    );
-    window.removeEventListener("offline", this.handlerOffline);
+    if ("connection" in navigator) {
+      (navigator as any).connection.removeEventListener(
+        "change",
+        this.handlerNetworkChange
+      );
+    }
 
+    window.removeEventListener("offline", this.handlerOffline);
+    this.autoRetry.destroy();
     this.loading.destroy();
     this.launcherBase?.player.showTextOverlay(text);
     if (opt.videoScreenshot) {

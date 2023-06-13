@@ -31,7 +31,7 @@ export const StatusCode = {
   ACCOUNT_PHONE_BIND_FAIL: 812,
   ACCOUNT_OLD_PASSWORD_ERROR: 813,
   FILE_DELETE_SUCCESS: 900,
-  
+
   APPSECRET_NOT_CORRECT: 1000,
   APPSECRET_EXPIRED: 1001,
   EXIST_SAME_ZIP: 1002,
@@ -44,6 +44,8 @@ export const StatusCode = {
   RESOURCES_FULL: 1019,
   no_real_name_verification: 1020,
   audit_app_is_running: 1022,
+  LOCAL_STORAGE_NOT_DISTRIBUTED: 1044,
+
   TOKEN_NOT_EXIST: 1101,
   NOT_IDLE_TOKEN: 1102,
   NICKNAME_EXIST: 1103,
@@ -120,4 +122,5 @@ export const StatusMap = new Map([
   [StatusCode.NICKNAME_EXIST, "昵称已存在"],
   [StatusCode.no_real_name_verification, "需进行实名认证后，才能访问应用。"],
   [StatusCode.audit_app_is_running, "正在审核中"],
+  [StatusCode.LOCAL_STORAGE_NOT_DISTRIBUTED, "本地存储未同步完成"],
 ]);

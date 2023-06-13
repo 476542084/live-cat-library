@@ -11,7 +11,7 @@ function bootstrap() {
   let launcherUI = new LauncherUI(
     {
       address: "https://app.3dcat.live",
-      appKey: "RR8DtBxQ7t8Qp90W", //unity 多点
+      appKey: "5wBhF6hR5TLZUSgl", //unity 多点
       // appKey: "kLofk3YjeQMIILqQ", //ue 多点
     },
     container,
@@ -67,26 +67,3 @@ window.addEventListener("DOMContentLoaded", () => {
     bootstrap();
   }
 });
-
-// window.addEventListener("DOMContentLoaded", () => {
-//   bootstart()
-//   loadingCompoent = new LoadingCompoent(
-//     document.body,
-//     {
-//       // loadingImage:
-//       //   "https://app-pre.3dcat.live:14431/images/3500/3843/2023/03/1641744786857791488.jpg",
-//       loadingBgImage: {
-//         portrait:
-//           "https://app-pre.3dcat.live:14431/images/3500/3843/2023/03/1641744883955929088.jpg",
-//         landscape:
-//           "https://app-pre.3dcat.live:14431/images/3500/3843/2023/03/1641744786857791488.jpg",
-//       },
-//       // loadingBarImage:
-//       //   "https://app-pre.3dcat.live:14431/images/3500/3843/2023/03/1641744786857791488.jpg",
-//     },
-//     (res) => {
-//       console.log("res", res);
-//     }
-//   );
-//   window.loadingCompoent = loadingCompoent;
-// });

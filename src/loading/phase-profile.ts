@@ -8,7 +8,6 @@ export const PhasePercentMap = new Map<Phase, [number, string]>([
   ["end-candidate", [65, "可视化服务连接中..."]],
   ["peer-connection-connected", [85, "可视化服务连接中..."]],
   ["data-channel-open", [90, "连接成功，资源加载中..."]],
-  // ["streaming-ready", [95, "连接成功，资源加载中..."]],
   ["loaded-metadata", [99, "连接成功，资源加载中..."]],
   ["streaming-playing", [100, "连接成功，资源加载中..."]],
 ]);

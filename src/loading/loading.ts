@@ -100,7 +100,6 @@ export class LoadingCompoent {
     try {
       const [percent, text] = PhasePercentMap.get(phase)!;
       this.phase = phase;
-      // console.log("showFakePercent", this.options.showFakePercent);
       showFakePercent.set(this.options.showFakePercent); //reset
       endPercentNum.set(percent);
       loadingText.set(text);

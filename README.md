@@ -12,7 +12,7 @@
 <a title="jsdelivr" target="_blank" href="https://www.jsdelivr.com/package/npm/live-cat"><img src="https://data.jsdelivr.com/v1/package/npm/live-cat/badge"/></a>
 </p>
 
-# Features： 
+# Features：
 
 - [x] Loading Component
 - [ ] FeedbackPanel Component
@@ -24,6 +24,7 @@
 
 # Technologies
 
+- live-cat v1.1.0
 - Svelte v3.57.0
 - Rollup v2.78.0
 - Typescript v4.9.5
@@ -73,14 +74,59 @@ interface ExtendUIOptions {
   onShowUserList: (showCastScreenUsers: boolean) => void;
   onRunningOptions: (opt: OnRunningOptions) => void;
 }
+
+interface OnChange {
+  phase: Phase;
+  fakePercent: number;
+  deltaTime: number;
+}
+
+type Phase =
+  | "initial"
+  | "signaling-connected"
+  | "node-ready"
+  | "end-candidate"
+  | "peer-connection-connected"
+  | "data-channel-open"
+  | "streaming-ready"
+  | "loaded-metadata"
+  | "streaming-playing";
+
+interface LoadingError {
+  code: number | string;
+  type: "app" | "task" | "connection" | "reConnection";
+  reason: string | ErrorState;
+}
+
+type ErrorState = "disconnect" | "afk" | "kick";
+
+interface OnRunningOptions {
+  token: string;
+  coturns: RTCIceServer[];
+  signaling: string;
+}
 enum StartType {
-  Normal = 1,
-  Screen = 3,
+  NormalMode = 1,
+  ScreenMode = 3,
 }
 enum ScreenJoinType {
   Secret = 1,
   Link,
 }
+```
+
+```typescript
+//when terminal is ios and wechat
+onPhaseChange: (phase: Phase, deltaTime: number) => {
+  if (phase === "data-channel-open") {
+    /* NOTE: Autoplay video need user activation gesture
+     * @see https://html.spec.whatwg.org/multipage/interaction.html#user-activation-processing-model
+     */
+    someTriggerElement.addEventListener("click", () =>
+      launcher?.launcherBase?.resumeVideoStream()
+    );
+  }
+};
 ```
 
 ```typescript

@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  /* live-cat-library v0.1.0.beta.0 @license MIT */
+  /* live-cat-library v0.1.2 @license MIT */
   function noop$1() { }
   function assign(tar, src) {
       // @ts-ignore
@@ -532,7 +532,7 @@
       }
   }
 
-  /*! *****************************************************************************
+  /******************************************************************************
   Copyright (c) Microsoft Corporation.
 
   Permission to use, copy, modify, and/or distribute this software for any
@@ -561,6 +561,28 @@
       extendStatics(d, b);
       function __() { this.constructor = d; }
       d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+  }
+
+  function __rest(s, e) {
+      var t = {};
+      for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+          t[p] = s[p];
+      if (s != null && typeof Object.getOwnPropertySymbols === "function")
+          for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+              if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                  t[p[i]] = s[p[i]];
+          }
+      return t;
+  }
+
+  function __awaiter(thisArg, _arguments, P, generator) {
+      function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+      return new (P || (P = Promise))(function (resolve, reject) {
+          function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+          function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+          function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+          step((generator = generator.apply(thisArg, _arguments || [])).next());
+      });
   }
 
   function __values(o) {
@@ -592,10 +614,14 @@
       return ar;
   }
 
-  function __spreadArray(to, from) {
-      for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
-          to[j] = from[i];
-      return to;
+  function __spreadArray(to, from, pack) {
+      if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+          if (ar || !(i in from)) {
+              if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+              ar[i] = from[i];
+          }
+      }
+      return to.concat(ar || Array.prototype.slice.call(from));
   }
 
   function isFunction(value) {
@@ -636,7 +662,7 @@
           this.initialTeardown = initialTeardown;
           this.closed = false;
           this._parentage = null;
-          this._teardowns = null;
+          this._finalizers = null;
       }
       Subscription.prototype.unsubscribe = function () {
           var e_1, _a, e_2, _b;
@@ -665,23 +691,23 @@
                       _parentage.remove(this);
                   }
               }
-              var initialTeardown = this.initialTeardown;
-              if (isFunction(initialTeardown)) {
+              var initialFinalizer = this.initialTeardown;
+              if (isFunction(initialFinalizer)) {
                   try {
-                      initialTeardown();
+                      initialFinalizer();
                   }
                   catch (e) {
                       errors = e instanceof UnsubscriptionError ? e.errors : [e];
                   }
               }
-              var _teardowns = this._teardowns;
-              if (_teardowns) {
-                  this._teardowns = null;
+              var _finalizers = this._finalizers;
+              if (_finalizers) {
+                  this._finalizers = null;
                   try {
-                      for (var _teardowns_1 = __values(_teardowns), _teardowns_1_1 = _teardowns_1.next(); !_teardowns_1_1.done; _teardowns_1_1 = _teardowns_1.next()) {
-                          var teardown_1 = _teardowns_1_1.value;
+                      for (var _finalizers_1 = __values(_finalizers), _finalizers_1_1 = _finalizers_1.next(); !_finalizers_1_1.done; _finalizers_1_1 = _finalizers_1.next()) {
+                          var finalizer = _finalizers_1_1.value;
                           try {
-                              execTeardown(teardown_1);
+                              execFinalizer(finalizer);
                           }
                           catch (err) {
                               errors = errors !== null && errors !== void 0 ? errors : [];
@@ -697,7 +723,7 @@
                   catch (e_2_1) { e_2 = { error: e_2_1 }; }
                   finally {
                       try {
-                          if (_teardowns_1_1 && !_teardowns_1_1.done && (_b = _teardowns_1.return)) _b.call(_teardowns_1);
+                          if (_finalizers_1_1 && !_finalizers_1_1.done && (_b = _finalizers_1.return)) _b.call(_finalizers_1);
                       }
                       finally { if (e_2) throw e_2.error; }
                   }
@@ -711,7 +737,7 @@
           var _a;
           if (teardown && teardown !== this) {
               if (this.closed) {
-                  execTeardown(teardown);
+                  execFinalizer(teardown);
               }
               else {
                   if (teardown instanceof Subscription) {
@@ -720,7 +746,7 @@
                       }
                       teardown._addParent(this);
                   }
-                  (this._teardowns = (_a = this._teardowns) !== null && _a !== void 0 ? _a : []).push(teardown);
+                  (this._finalizers = (_a = this._finalizers) !== null && _a !== void 0 ? _a : []).push(teardown);
               }
           }
       };
@@ -742,8 +768,8 @@
           }
       };
       Subscription.prototype.remove = function (teardown) {
-          var _teardowns = this._teardowns;
-          _teardowns && arrRemove(_teardowns, teardown);
+          var _finalizers = this._finalizers;
+          _finalizers && arrRemove(_finalizers, teardown);
           if (teardown instanceof Subscription) {
               teardown._removeParent(this);
           }
@@ -760,12 +786,12 @@
       return (value instanceof Subscription ||
           (value && 'closed' in value && isFunction(value.remove) && isFunction(value.add) && isFunction(value.unsubscribe)));
   }
-  function execTeardown(teardown) {
-      if (isFunction(teardown)) {
-          teardown();
+  function execFinalizer(finalizer) {
+      if (isFunction(finalizer)) {
+          finalizer();
       }
       else {
-          teardown.unsubscribe();
+          finalizer.unsubscribe();
       }
   }
 
@@ -778,12 +804,12 @@
   };
 
   var timeoutProvider = {
-      setTimeout: function () {
+      setTimeout: function (handler, timeout) {
           var args = [];
-          for (var _i = 0; _i < arguments.length; _i++) {
-              args[_i] = arguments[_i];
+          for (var _i = 2; _i < arguments.length; _i++) {
+              args[_i - 2] = arguments[_i];
           }
-          return (setTimeout).apply(void 0, __spreadArray([], __read(args)));
+          return setTimeout.apply(void 0, __spreadArray([handler, timeout], __read(args)));
       },
       clearTimeout: function (handle) {
           return (clearTimeout)(handle);
@@ -874,52 +900,88 @@
       };
       return Subscriber;
   }(Subscription));
+  var _bind = Function.prototype.bind;
+  function bind(fn, thisArg) {
+      return _bind.call(fn, thisArg);
+  }
+  var ConsumerObserver = (function () {
+      function ConsumerObserver(partialObserver) {
+          this.partialObserver = partialObserver;
+      }
+      ConsumerObserver.prototype.next = function (value) {
+          var partialObserver = this.partialObserver;
+          if (partialObserver.next) {
+              try {
+                  partialObserver.next(value);
+              }
+              catch (error) {
+                  handleUnhandledError(error);
+              }
+          }
+      };
+      ConsumerObserver.prototype.error = function (err) {
+          var partialObserver = this.partialObserver;
+          if (partialObserver.error) {
+              try {
+                  partialObserver.error(err);
+              }
+              catch (error) {
+                  handleUnhandledError(error);
+              }
+          }
+          else {
+              handleUnhandledError(err);
+          }
+      };
+      ConsumerObserver.prototype.complete = function () {
+          var partialObserver = this.partialObserver;
+          if (partialObserver.complete) {
+              try {
+                  partialObserver.complete();
+              }
+              catch (error) {
+                  handleUnhandledError(error);
+              }
+          }
+      };
+      return ConsumerObserver;
+  }());
   var SafeSubscriber = (function (_super) {
       __extends(SafeSubscriber, _super);
       function SafeSubscriber(observerOrNext, error, complete) {
           var _this = _super.call(this) || this;
-          var next;
-          if (isFunction(observerOrNext)) {
-              next = observerOrNext;
+          var partialObserver;
+          if (isFunction(observerOrNext) || !observerOrNext) {
+              partialObserver = {
+                  next: (observerOrNext !== null && observerOrNext !== void 0 ? observerOrNext : undefined),
+                  error: error !== null && error !== void 0 ? error : undefined,
+                  complete: complete !== null && complete !== void 0 ? complete : undefined,
+              };
           }
-          else if (observerOrNext) {
-              (next = observerOrNext.next, error = observerOrNext.error, complete = observerOrNext.complete);
+          else {
               var context_1;
               if (_this && config.useDeprecatedNextContext) {
                   context_1 = Object.create(observerOrNext);
                   context_1.unsubscribe = function () { return _this.unsubscribe(); };
+                  partialObserver = {
+                      next: observerOrNext.next && bind(observerOrNext.next, context_1),
+                      error: observerOrNext.error && bind(observerOrNext.error, context_1),
+                      complete: observerOrNext.complete && bind(observerOrNext.complete, context_1),
+                  };
               }
               else {
-                  context_1 = observerOrNext;
+                  partialObserver = observerOrNext;
               }
-              next = next === null || next === void 0 ? void 0 : next.bind(context_1);
-              error = error === null || error === void 0 ? void 0 : error.bind(context_1);
-              complete = complete === null || complete === void 0 ? void 0 : complete.bind(context_1);
           }
-          _this.destination = {
-              next: next ? wrapForErrorHandling(next) : noop,
-              error: wrapForErrorHandling(error !== null && error !== void 0 ? error : defaultErrorHandler),
-              complete: complete ? wrapForErrorHandling(complete) : noop,
-          };
+          _this.destination = new ConsumerObserver(partialObserver);
           return _this;
       }
       return SafeSubscriber;
   }(Subscriber));
-  function wrapForErrorHandling(handler, instance) {
-      return function () {
-          var args = [];
-          for (var _i = 0; _i < arguments.length; _i++) {
-              args[_i] = arguments[_i];
-          }
-          try {
-              handler.apply(void 0, __spreadArray([], __read(args)));
-          }
-          catch (err) {
-              {
-                  reportUnhandledError(err);
-              }
-          }
-      };
+  function handleUnhandledError(error) {
+      {
+          reportUnhandledError(error);
+      }
   }
   function defaultErrorHandler(err) {
       throw err;
@@ -989,16 +1051,20 @@
           var _this = this;
           promiseCtor = getPromiseCtor(promiseCtor);
           return new promiseCtor(function (resolve, reject) {
-              var subscription;
-              subscription = _this.subscribe(function (value) {
-                  try {
-                      next(value);
-                  }
-                  catch (err) {
-                      reject(err);
-                      subscription === null || subscription === void 0 ? void 0 : subscription.unsubscribe();
-                  }
-              }, reject, resolve);
+              var subscriber = new SafeSubscriber({
+                  next: function (value) {
+                      try {
+                          next(value);
+                      }
+                      catch (err) {
+                          reject(err);
+                          subscriber.unsubscribe();
+                      }
+                  },
+                  error: reject,
+                  complete: resolve,
+              });
+              _this.subscribe(subscriber);
           });
       };
       Observable.prototype._subscribe = function (subscriber) {
@@ -1058,13 +1124,12 @@
   }(Subscription));
 
   var intervalProvider = {
-      setInterval: function () {
+      setInterval: function (handler, timeout) {
           var args = [];
-          for (var _i = 0; _i < arguments.length; _i++) {
-              args[_i] = arguments[_i];
+          for (var _i = 2; _i < arguments.length; _i++) {
+              args[_i - 2] = arguments[_i];
           }
-          var delegate = intervalProvider.delegate;
-          return ((delegate === null || delegate === void 0 ? void 0 : delegate.setInterval) || setInterval).apply(void 0, __spreadArray([], __read(args)));
+          return setInterval.apply(void 0, __spreadArray([handler, timeout], __read(args)));
       },
       clearInterval: function (handle) {
           return (clearInterval)(handle);
@@ -1082,6 +1147,7 @@
           return _this;
       }
       AsyncAction.prototype.schedule = function (state, delay) {
+          var _a;
           if (delay === void 0) { delay = 0; }
           if (this.closed) {
               return this;
@@ -1094,7 +1160,7 @@
           }
           this.pending = true;
           this.delay = delay;
-          this.id = this.id || this.requestAsyncId(scheduler, this.id, delay);
+          this.id = (_a = this.id) !== null && _a !== void 0 ? _a : this.requestAsyncId(scheduler, this.id, delay);
           return this;
       };
       AsyncAction.prototype.requestAsyncId = function (scheduler, _id, delay) {
@@ -1106,7 +1172,9 @@
           if (delay != null && this.delay === delay && this.pending === false) {
               return id;
           }
-          intervalProvider.clearInterval(id);
+          if (id != null) {
+              intervalProvider.clearInterval(id);
+          }
           return undefined;
       };
       AsyncAction.prototype.execute = function (state, delay) {
@@ -1175,7 +1243,6 @@
           var _this = _super.call(this, SchedulerAction, now) || this;
           _this.actions = [];
           _this._active = false;
-          _this._scheduled = undefined;
           return _this;
       }
       AsyncScheduler.prototype.flush = function (action) {
@@ -1751,7 +1818,7 @@
   }
 
   // (4:0) {#if loadingImage instanceof HTMLImageElement}
-  function create_if_block$3(ctx) {
+  function create_if_block$2(ctx) {
   	let t;
 
   	return {
@@ -1774,7 +1841,7 @@
   	let if_block_anchor;
 
   	function select_block_type(ctx, dirty) {
-  		if (/*loadingImage*/ ctx[0] instanceof HTMLImageElement) return create_if_block$3;
+  		if (/*loadingImage*/ ctx[0] instanceof HTMLImageElement) return create_if_block$2;
   		return create_else_block$2;
   	}
 
@@ -1837,82 +1904,60 @@
   	append_styles(target, "svelte-108mmsu", ".loading-text.svelte-108mmsu.svelte-108mmsu.svelte-108mmsu{font-size:14px;display:flex}.loading-text.svelte-108mmsu span.svelte-108mmsu+span.svelte-108mmsu{display:block}.percent-num.svelte-108mmsu.svelte-108mmsu.svelte-108mmsu{margin-left:4px}");
   }
 
-  // (37:2) {#if $showFakePercent}
-  function create_if_block$2(ctx) {
-  	let span0;
-  	let t0;
-  	let span1;
-
-  	return {
-  		c() {
-  			span0 = element("span");
-  			t0 = space();
-  			span1 = element("span");
-  			span1.textContent = "%";
-  			attr(span0, "class", "percent-num svelte-108mmsu");
-  			attr(span1, "class", "svelte-108mmsu");
-  		},
-  		m(target, anchor) {
-  			insert(target, span0, anchor);
-  			/*span0_binding*/ ctx[4](span0);
-  			insert(target, t0, anchor);
-  			insert(target, span1, anchor);
-  		},
-  		p: noop$1,
-  		d(detaching) {
-  			if (detaching) detach(span0);
-  			/*span0_binding*/ ctx[4](null);
-  			if (detaching) detach(t0);
-  			if (detaching) detach(span1);
-  		}
-  	};
-  }
-
   function create_fragment$4(ctx) {
   	let div;
-  	let span;
+  	let span0;
   	let t0;
   	let t1;
-  	let if_block = /*$showFakePercent*/ ctx[2] && create_if_block$2(ctx);
+  	let span1;
+  	let t2;
+  	let span2;
+  	let t3;
 
   	return {
   		c() {
   			div = element("div");
-  			span = element("span");
+  			span0 = element("span");
   			t0 = text(/*$loadingText*/ ctx[1]);
   			t1 = space();
-  			if (if_block) if_block.c();
-  			attr(span, "class", "svelte-108mmsu");
+  			span1 = element("span");
+  			t2 = space();
+  			span2 = element("span");
+  			t3 = text("%");
+  			attr(span0, "class", "svelte-108mmsu");
+  			attr(span1, "class", "percent-num svelte-108mmsu");
+  			set_style(span1, "display", /*$showFakePercent*/ ctx[2] ? 'inline-block' : 'none');
+  			set_style(span2, "display", /*$showFakePercent*/ ctx[2] ? 'inline-block' : 'none');
+  			attr(span2, "class", "svelte-108mmsu");
   			attr(div, "class", "loading-text svelte-108mmsu");
   		},
   		m(target, anchor) {
   			insert(target, div, anchor);
-  			append(div, span);
-  			append(span, t0);
+  			append(div, span0);
+  			append(span0, t0);
   			append(div, t1);
-  			if (if_block) if_block.m(div, null);
+  			append(div, span1);
+  			/*span1_binding*/ ctx[4](span1);
+  			append(div, t2);
+  			append(div, span2);
+  			append(span2, t3);
   		},
   		p(ctx, [dirty]) {
   			if (dirty & /*$loadingText*/ 2) set_data(t0, /*$loadingText*/ ctx[1]);
 
-  			if (/*$showFakePercent*/ ctx[2]) {
-  				if (if_block) {
-  					if_block.p(ctx, dirty);
-  				} else {
-  					if_block = create_if_block$2(ctx);
-  					if_block.c();
-  					if_block.m(div, null);
-  				}
-  			} else if (if_block) {
-  				if_block.d(1);
-  				if_block = null;
+  			if (dirty & /*$showFakePercent*/ 4) {
+  				set_style(span1, "display", /*$showFakePercent*/ ctx[2] ? 'inline-block' : 'none');
+  			}
+
+  			if (dirty & /*$showFakePercent*/ 4) {
+  				set_style(span2, "display", /*$showFakePercent*/ ctx[2] ? 'inline-block' : 'none');
   			}
   		},
   		i: noop$1,
   		o: noop$1,
   		d(detaching) {
   			if (detaching) detach(div);
-  			if (if_block) if_block.d();
+  			/*span1_binding*/ ctx[4](null);
   		}
   	};
   }
@@ -1958,14 +2003,14 @@
   		});
   	});
 
-  	function span0_binding($$value) {
+  	function span1_binding($$value) {
   		binding_callbacks[$$value ? 'unshift' : 'push'](() => {
   			percentEl = $$value;
   			$$invalidate(0, percentEl);
   		});
   	}
 
-  	return [percentEl, $loadingText, $showFakePercent, updatePrecentHandler, span0_binding];
+  	return [percentEl, $loadingText, $showFakePercent, updatePrecentHandler, span1_binding];
   }
 
   class Loading_text extends SvelteComponent {
@@ -3084,7 +3129,6 @@
       ["end-candidate", [65, "可视化服务连接中..."]],
       ["peer-connection-connected", [85, "可视化服务连接中..."]],
       ["data-channel-open", [90, "连接成功，资源加载中..."]],
-      // ["streaming-ready", [95, "连接成功，资源加载中..."]],
       ["loaded-metadata", [99, "连接成功，资源加载中..."]],
       ["streaming-playing", [100, "连接成功，资源加载中..."]],
   ]);
@@ -3136,6 +3180,7 @@
           try {
               const [percent, text] = PhasePercentMap.get(phase);
               this.phase = phase;
+              // console.log("showFakePercent", this.options.showFakePercent);
               showFakePercent.set(this.options.showFakePercent); //reset
               endPercentNum.set(percent);
               loadingText.set(text);
@@ -3165,43 +3210,6 @@
       phaseChanged: true,
       percentChanged: true,
   };
-
-  /******************************************************************************
-  Copyright (c) Microsoft Corporation.
-
-  Permission to use, copy, modify, and/or distribute this software for any
-  purpose with or without fee is hereby granted.
-
-  THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
-  REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
-  AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
-  INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
-  LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
-  OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-  PERFORMANCE OF THIS SOFTWARE.
-  ***************************************************************************** */
-
-  function __rest(s, e) {
-      var t = {};
-      for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
-          t[p] = s[p];
-      if (s != null && typeof Object.getOwnPropertySymbols === "function")
-          for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
-              if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
-                  t[p[i]] = s[p[i]];
-          }
-      return t;
-  }
-
-  function __awaiter(thisArg, _arguments, P, generator) {
-      function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-      return new (P || (P = Promise))(function (resolve, reject) {
-          function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-          function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-          function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-          step((generator = generator.apply(thisArg, _arguments || [])).next());
-      });
-  }
 
   var commonjsGlobal = typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
 
@@ -13429,6 +13437,7 @@
               return merge(tm, s, e).pipe(map(function (e) { return normalizeUeMultiTouch(e, normalizeIdentifier); }));
           };
           Helper.createWinTouchStream = function (target, runningInfo) {
+              var normalizeIdentifier = new NormalizeIdentifier();
               var flagMap = new Map([
                   ['pointerdown', exports.WinPointerFlag.PointerDown],
                   ['pointermove', exports.WinPointerFlag.PointerUpdate],
@@ -13440,7 +13449,7 @@
               var filterTouch = function (event) { return event.pointerType === 'touch'; };
               var createWinPointer = function (event, dealWithVideoSize) {
                   var _a = normalizePointer(event, dealWithVideoSize), x = _a.x, y = _a.y;
-                  return new WinPointer(event.pointerId, x, y, event.width, event.height, flagMap.get(event.type), event.twist, ~~(event.pressure * 1024));
+                  return new WinPointer(normalizeIdentifier.get(event.pointerId), x, y, event.width, event.height, flagMap.get(event.type), event.twist, ~~(event.pressure * 1024));
               };
               var down$ = fromEvent(target, 'pointerdown').pipe(tap(preventDefault), filter(filterTouch));
               var up$ = fromEvent(target, 'pointerup').pipe(tap(preventDefault), filter(filterTouch));
@@ -13448,6 +13457,9 @@
               var cancel$ = fromEvent(target, 'pointercancel').pipe(tap(preventDefault), filter(filterTouch));
               var winTouchStream = merge(down$, move$, up$, cancel$).pipe(scan(function (acc, event) {
                   var pointerMap = acc.pointerMap;
+                  if (event.type === 'pointerdown') {
+                      normalizeIdentifier.trigger(event.pointerId);
+                  }
                   if (['pointerup', 'pointercancel'].includes(event.type)) {
                       pointerMap.delete(event.pointerId);
                   }
@@ -13461,16 +13473,16 @@
                   var pointerList = __spreadArray([], __read(pointerMap.values()), false).map(function (event) { return createWinPointer(event, dwvs); });
                   if (action.type === 'pointermove') {
                       // NOTE: make down event to update flag
-                      pointerList.forEach(function (e) {
-                          return (e.flags =
-                              exports.WinPointerFlag.PointerInrange +
-                                  exports.WinPointerFlag.PointerIncontact +
-                                  exports.WinPointerFlag.PointerUpdate);
-                      });
+                      var flags_1 = exports.WinPointerFlag.PointerInrange +
+                          exports.WinPointerFlag.PointerIncontact +
+                          exports.WinPointerFlag.PointerUpdate;
+                      pointerList.forEach(function (e) { return (e.flags = flags_1); });
                   }
                   else if (['pointerup', 'pointercancel'].includes(action.type)) {
                       pointerList.push(createWinPointer(action, dwvs));
+                      normalizeIdentifier.shift(action.pointerId);
                   }
+                  // console.log('WinTouch', runningInfo.touchNormalizeType, action.type, poinzterList)
                   return new WinTouch(runningInfo.touchNormalizeType, pointerList).dumps();
               }));
               return winTouchStream;
@@ -22029,16 +22041,16 @@
   };
 
   function memoize(fn) {
-    var cache = {};
+    var cache = Object.create(null);
     return function (arg) {
       if (cache[arg] === undefined) cache[arg] = fn(arg);
       return cache[arg];
     };
   }
 
-  var reactPropsRegex = /^((children|dangerouslySetInnerHTML|key|ref|autoFocus|defaultValue|defaultChecked|innerHTML|suppressContentEditableWarning|suppressHydrationWarning|valueLink|accept|acceptCharset|accessKey|action|allow|allowUserMedia|allowPaymentRequest|allowFullScreen|allowTransparency|alt|async|autoComplete|autoPlay|capture|cellPadding|cellSpacing|challenge|charSet|checked|cite|classID|className|cols|colSpan|content|contentEditable|contextMenu|controls|controlsList|coords|crossOrigin|data|dateTime|decoding|default|defer|dir|disabled|disablePictureInPicture|download|draggable|encType|form|formAction|formEncType|formMethod|formNoValidate|formTarget|frameBorder|headers|height|hidden|high|href|hrefLang|htmlFor|httpEquiv|id|inputMode|integrity|is|keyParams|keyType|kind|label|lang|list|loading|loop|low|marginHeight|marginWidth|max|maxLength|media|mediaGroup|method|min|minLength|multiple|muted|name|nonce|noValidate|open|optimum|pattern|placeholder|playsInline|poster|preload|profile|radioGroup|readOnly|referrerPolicy|rel|required|reversed|role|rows|rowSpan|sandbox|scope|scoped|scrolling|seamless|selected|shape|size|sizes|slot|span|spellCheck|src|srcDoc|srcLang|srcSet|start|step|style|summary|tabIndex|target|title|type|useMap|value|width|wmode|wrap|about|datatype|inlist|prefix|property|resource|typeof|vocab|autoCapitalize|autoCorrect|autoSave|color|inert|itemProp|itemScope|itemType|itemID|itemRef|on|results|security|unselectable|accentHeight|accumulate|additive|alignmentBaseline|allowReorder|alphabetic|amplitude|arabicForm|ascent|attributeName|attributeType|autoReverse|azimuth|baseFrequency|baselineShift|baseProfile|bbox|begin|bias|by|calcMode|capHeight|clip|clipPathUnits|clipPath|clipRule|colorInterpolation|colorInterpolationFilters|colorProfile|colorRendering|contentScriptType|contentStyleType|cursor|cx|cy|d|decelerate|descent|diffuseConstant|direction|display|divisor|dominantBaseline|dur|dx|dy|edgeMode|elevation|enableBackground|end|exponent|externalResourcesRequired|fill|fillOpacity|fillRule|filter|filterRes|filterUnits|floodColor|floodOpacity|focusable|fontFamily|fontSize|fontSizeAdjust|fontStretch|fontStyle|fontVariant|fontWeight|format|from|fr|fx|fy|g1|g2|glyphName|glyphOrientationHorizontal|glyphOrientationVertical|glyphRef|gradientTransform|gradientUnits|hanging|horizAdvX|horizOriginX|ideographic|imageRendering|in|in2|intercept|k|k1|k2|k3|k4|kernelMatrix|kernelUnitLength|kerning|keyPoints|keySplines|keyTimes|lengthAdjust|letterSpacing|lightingColor|limitingConeAngle|local|markerEnd|markerMid|markerStart|markerHeight|markerUnits|markerWidth|mask|maskContentUnits|maskUnits|mathematical|mode|numOctaves|offset|opacity|operator|order|orient|orientation|origin|overflow|overlinePosition|overlineThickness|panose1|paintOrder|pathLength|patternContentUnits|patternTransform|patternUnits|pointerEvents|points|pointsAtX|pointsAtY|pointsAtZ|preserveAlpha|preserveAspectRatio|primitiveUnits|r|radius|refX|refY|renderingIntent|repeatCount|repeatDur|requiredExtensions|requiredFeatures|restart|result|rotate|rx|ry|scale|seed|shapeRendering|slope|spacing|specularConstant|specularExponent|speed|spreadMethod|startOffset|stdDeviation|stemh|stemv|stitchTiles|stopColor|stopOpacity|strikethroughPosition|strikethroughThickness|string|stroke|strokeDasharray|strokeDashoffset|strokeLinecap|strokeLinejoin|strokeMiterlimit|strokeOpacity|strokeWidth|surfaceScale|systemLanguage|tableValues|targetX|targetY|textAnchor|textDecoration|textRendering|textLength|to|transform|u1|u2|underlinePosition|underlineThickness|unicode|unicodeBidi|unicodeRange|unitsPerEm|vAlphabetic|vHanging|vIdeographic|vMathematical|values|vectorEffect|version|vertAdvY|vertOriginX|vertOriginY|viewBox|viewTarget|visibility|widths|wordSpacing|writingMode|x|xHeight|x1|x2|xChannelSelector|xlinkActuate|xlinkArcrole|xlinkHref|xlinkRole|xlinkShow|xlinkTitle|xlinkType|xmlBase|xmlns|xmlnsXlink|xmlLang|xmlSpace|y|y1|y2|yChannelSelector|z|zoomAndPan|for|class|autofocus)|(([Dd][Aa][Tt][Aa]|[Aa][Rr][Ii][Aa]|x)-.*))$/; // https://esbench.com/bench/5bfee68a4cd7e6009ef61d23
+  var reactPropsRegex = /^((children|dangerouslySetInnerHTML|key|ref|autoFocus|defaultValue|defaultChecked|innerHTML|suppressContentEditableWarning|suppressHydrationWarning|valueLink|abbr|accept|acceptCharset|accessKey|action|allow|allowUserMedia|allowPaymentRequest|allowFullScreen|allowTransparency|alt|async|autoComplete|autoPlay|capture|cellPadding|cellSpacing|challenge|charSet|checked|cite|classID|className|cols|colSpan|content|contentEditable|contextMenu|controls|controlsList|coords|crossOrigin|data|dateTime|decoding|default|defer|dir|disabled|disablePictureInPicture|download|draggable|encType|enterKeyHint|form|formAction|formEncType|formMethod|formNoValidate|formTarget|frameBorder|headers|height|hidden|high|href|hrefLang|htmlFor|httpEquiv|id|inputMode|integrity|is|keyParams|keyType|kind|label|lang|list|loading|loop|low|marginHeight|marginWidth|max|maxLength|media|mediaGroup|method|min|minLength|multiple|muted|name|nonce|noValidate|open|optimum|pattern|placeholder|playsInline|poster|preload|profile|radioGroup|readOnly|referrerPolicy|rel|required|reversed|role|rows|rowSpan|sandbox|scope|scoped|scrolling|seamless|selected|shape|size|sizes|slot|span|spellCheck|src|srcDoc|srcLang|srcSet|start|step|style|summary|tabIndex|target|title|translate|type|useMap|value|width|wmode|wrap|about|datatype|inlist|prefix|property|resource|typeof|vocab|autoCapitalize|autoCorrect|autoSave|color|incremental|fallback|inert|itemProp|itemScope|itemType|itemID|itemRef|on|option|results|security|unselectable|accentHeight|accumulate|additive|alignmentBaseline|allowReorder|alphabetic|amplitude|arabicForm|ascent|attributeName|attributeType|autoReverse|azimuth|baseFrequency|baselineShift|baseProfile|bbox|begin|bias|by|calcMode|capHeight|clip|clipPathUnits|clipPath|clipRule|colorInterpolation|colorInterpolationFilters|colorProfile|colorRendering|contentScriptType|contentStyleType|cursor|cx|cy|d|decelerate|descent|diffuseConstant|direction|display|divisor|dominantBaseline|dur|dx|dy|edgeMode|elevation|enableBackground|end|exponent|externalResourcesRequired|fill|fillOpacity|fillRule|filter|filterRes|filterUnits|floodColor|floodOpacity|focusable|fontFamily|fontSize|fontSizeAdjust|fontStretch|fontStyle|fontVariant|fontWeight|format|from|fr|fx|fy|g1|g2|glyphName|glyphOrientationHorizontal|glyphOrientationVertical|glyphRef|gradientTransform|gradientUnits|hanging|horizAdvX|horizOriginX|ideographic|imageRendering|in|in2|intercept|k|k1|k2|k3|k4|kernelMatrix|kernelUnitLength|kerning|keyPoints|keySplines|keyTimes|lengthAdjust|letterSpacing|lightingColor|limitingConeAngle|local|markerEnd|markerMid|markerStart|markerHeight|markerUnits|markerWidth|mask|maskContentUnits|maskUnits|mathematical|mode|numOctaves|offset|opacity|operator|order|orient|orientation|origin|overflow|overlinePosition|overlineThickness|panose1|paintOrder|pathLength|patternContentUnits|patternTransform|patternUnits|pointerEvents|points|pointsAtX|pointsAtY|pointsAtZ|preserveAlpha|preserveAspectRatio|primitiveUnits|r|radius|refX|refY|renderingIntent|repeatCount|repeatDur|requiredExtensions|requiredFeatures|restart|result|rotate|rx|ry|scale|seed|shapeRendering|slope|spacing|specularConstant|specularExponent|speed|spreadMethod|startOffset|stdDeviation|stemh|stemv|stitchTiles|stopColor|stopOpacity|strikethroughPosition|strikethroughThickness|string|stroke|strokeDasharray|strokeDashoffset|strokeLinecap|strokeLinejoin|strokeMiterlimit|strokeOpacity|strokeWidth|surfaceScale|systemLanguage|tableValues|targetX|targetY|textAnchor|textDecoration|textRendering|textLength|to|transform|u1|u2|underlinePosition|underlineThickness|unicode|unicodeBidi|unicodeRange|unitsPerEm|vAlphabetic|vHanging|vIdeographic|vMathematical|values|vectorEffect|version|vertAdvY|vertOriginX|vertOriginY|viewBox|viewTarget|visibility|widths|wordSpacing|writingMode|x|xHeight|x1|x2|xChannelSelector|xlinkActuate|xlinkArcrole|xlinkHref|xlinkRole|xlinkShow|xlinkTitle|xlinkType|xmlBase|xmlns|xmlnsXlink|xmlLang|xmlSpace|y|y1|y2|yChannelSelector|z|zoomAndPan|for|class|autofocus)|(([Dd][Aa][Tt][Aa]|[Aa][Rr][Ii][Aa]|x)-.*))$/; // https://esbench.com/bench/5bfee68a4cd7e6009ef61d23
 
-  var index$1 = memoize(function (prop) {
+  var isPropValid = /* #__PURE__ */memoize(function (prop) {
     return reactPropsRegex.test(prop) || prop.charCodeAt(0) === 111
     /* o */
     && prop.charCodeAt(1) === 110
@@ -22150,26 +22162,26 @@
 
   var hoistNonReactStatics_cjs = hoistNonReactStatics;
 
-  function v(){return (v=Object.assign||function(e){for(var t=1;t<arguments.length;t++){var n=arguments[t];for(var r in n)Object.prototype.hasOwnProperty.call(n,r)&&(e[r]=n[r]);}return e}).apply(this,arguments)}var g=function(e,t){for(var n=[e[0]],r=0,o=t.length;r<o;r+=1)n.push(t[r],e[r+1]);return n},S=function(t){return null!==t&&"object"==typeof t&&"[object Object]"===(t.toString?t.toString():Object.prototype.toString.call(t))&&!reactIs$1.exports.typeOf(t)},w=Object.freeze([]),E=Object.freeze({});function b(e){return "function"==typeof e}function _(e){return "string"==typeof e&&e||e.displayName||e.name||"Component"}function N(e){return e&&"string"==typeof e.styledComponentId}var A="undefined"!=typeof process&&(process.env.REACT_APP_SC_ATTR||process.env.SC_ATTR)||"data-styled",C="5.3.3",I="undefined"!=typeof window&&"HTMLElement"in window,P=Boolean("boolean"==typeof SC_DISABLE_SPEEDY?SC_DISABLE_SPEEDY:"undefined"!=typeof process&&void 0!==process.env.REACT_APP_SC_DISABLE_SPEEDY&&""!==process.env.REACT_APP_SC_DISABLE_SPEEDY?"false"!==process.env.REACT_APP_SC_DISABLE_SPEEDY&&process.env.REACT_APP_SC_DISABLE_SPEEDY:"undefined"!=typeof process&&void 0!==process.env.SC_DISABLE_SPEEDY&&""!==process.env.SC_DISABLE_SPEEDY?"false"!==process.env.SC_DISABLE_SPEEDY&&process.env.SC_DISABLE_SPEEDY:"production"!=="development"),O={},R={1:"Cannot create styled-component for component: %s.\n\n",2:"Can't collect styles once you've consumed a `ServerStyleSheet`'s styles! `ServerStyleSheet` is a one off instance for each server-side render cycle.\n\n- Are you trying to reuse it across renders?\n- Are you accidentally calling collectStyles twice?\n\n",3:"Streaming SSR is only supported in a Node.js environment; Please do not try to call this method in the browser.\n\n",4:"The `StyleSheetManager` expects a valid target or sheet prop!\n\n- Does this error occur on the client and is your target falsy?\n- Does this error occur on the server and is the sheet falsy?\n\n",5:"The clone method cannot be used on the client!\n\n- Are you running in a client-like environment on the server?\n- Are you trying to run SSR on the client?\n\n",6:"Trying to insert a new style tag, but the given Node is unmounted!\n\n- Are you using a custom target that isn't mounted?\n- Does your document not have a valid head element?\n- Have you accidentally removed a style tag manually?\n\n",7:'ThemeProvider: Please return an object from your "theme" prop function, e.g.\n\n```js\ntheme={() => ({})}\n```\n\n',8:'ThemeProvider: Please make your "theme" prop an object.\n\n',9:"Missing document `<head>`\n\n",10:"Cannot find a StyleSheet instance. Usually this happens if there are multiple copies of styled-components loaded at once. Check out this issue for how to troubleshoot and fix the common cases where this situation can happen: https://github.com/styled-components/styled-components/issues/1941#issuecomment-417862021\n\n",11:"_This error was replaced with a dev-time warning, it will be deleted for v4 final._ [createGlobalStyle] received children which will not be rendered. Please use the component without passing children elements.\n\n",12:"It seems you are interpolating a keyframe declaration (%s) into an untagged string. This was supported in styled-components v3, but is not longer supported in v4 as keyframes are now injected on-demand. Please wrap your string in the css\\`\\` helper which ensures the styles are injected correctly. See https://www.styled-components.com/docs/api#css\n\n",13:"%s is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details.\n\n",14:'ThemeProvider: "theme" prop is required.\n\n',15:"A stylis plugin has been supplied that is not named. We need a name for each plugin to be able to prevent styling collisions between different stylis configurations within the same app. Before you pass your plugin to `<StyleSheetManager stylisPlugins={[]}>`, please make sure each plugin is uniquely-named, e.g.\n\n```js\nObject.defineProperty(importedPlugin, 'name', { value: 'some-unique-name' });\n```\n\n",16:"Reached the limit of how many styled components may be created at group %s.\nYou may only create up to 1,073,741,824 components. If you're creating components dynamically,\nas for instance in your render method then you may be running into this limitation.\n\n",17:"CSSStyleSheet could not be found on HTMLStyleElement.\nHas styled-components' style tag been unmounted or altered by another script?\n"};function D(){for(var e=arguments.length<=0?void 0:arguments[0],t=[],n=1,r=arguments.length;n<r;n+=1)t.push(n<0||arguments.length<=n?void 0:arguments[n]);return t.forEach((function(t){e=e.replace(/%[a-z]/,t);})),e}function j(e){for(var t=arguments.length,n=new Array(t>1?t-1:0),r=1;r<t;r++)n[r-1]=arguments[r];throw new Error(D.apply(void 0,[R[e]].concat(n)).trim())}var T=function(){function e(e){this.groupSizes=new Uint32Array(512),this.length=512,this.tag=e;}var t=e.prototype;return t.indexOfGroup=function(e){for(var t=0,n=0;n<e;n++)t+=this.groupSizes[n];return t},t.insertRules=function(e,t){if(e>=this.groupSizes.length){for(var n=this.groupSizes,r=n.length,o=r;e>=o;)(o<<=1)<0&&j(16,""+e);this.groupSizes=new Uint32Array(o),this.groupSizes.set(n),this.length=o;for(var s=r;s<o;s++)this.groupSizes[s]=0;}for(var i=this.indexOfGroup(e+1),a=0,c=t.length;a<c;a++)this.tag.insertRule(i,t[a])&&(this.groupSizes[e]++,i++);},t.clearGroup=function(e){if(e<this.length){var t=this.groupSizes[e],n=this.indexOfGroup(e),r=n+t;this.groupSizes[e]=0;for(var o=n;o<r;o++)this.tag.deleteRule(n);}},t.getGroup=function(e){var t="";if(e>=this.length||0===this.groupSizes[e])return t;for(var n=this.groupSizes[e],r=this.indexOfGroup(e),o=r+n,s=r;s<o;s++)t+=this.tag.getRule(s)+"/*!sc*/\n";return t},e}(),x=new Map,k=new Map,V=1,B=function(e){if(x.has(e))return x.get(e);for(;k.has(V);)V++;var t=V++;return ((0|t)<0||t>1<<30)&&j(16,""+t),x.set(e,t),k.set(t,e),t},z=function(e){return k.get(e)},M=function(e,t){t>=V&&(V=t+1),x.set(e,t),k.set(t,e);},G="style["+A+'][data-styled-version="5.3.3"]',L=new RegExp("^"+A+'\\.g(\\d+)\\[id="([\\w\\d-]+)"\\].*?"([^"]*)'),F=function(e,t,n){for(var r,o=n.split(","),s=0,i=o.length;s<i;s++)(r=o[s])&&e.registerName(t,r);},Y=function(e,t){for(var n=(t.textContent||"").split("/*!sc*/\n"),r=[],o=0,s=n.length;o<s;o++){var i=n[o].trim();if(i){var a=i.match(L);if(a){var c=0|parseInt(a[1],10),u=a[2];0!==c&&(M(u,c),F(e,u,a[3]),e.getTag().insertRules(c,r)),r.length=0;}else r.push(i);}}},q=function(){return "undefined"!=typeof window&&void 0!==window.__webpack_nonce__?window.__webpack_nonce__:null},H=function(e){var t=document.head,n=e||t,r=document.createElement("style"),o=function(e){for(var t=e.childNodes,n=t.length;n>=0;n--){var r=t[n];if(r&&1===r.nodeType&&r.hasAttribute(A))return r}}(n),s=void 0!==o?o.nextSibling:null;r.setAttribute(A,"active"),r.setAttribute("data-styled-version","5.3.3");var i=q();return i&&r.setAttribute("nonce",i),n.insertBefore(r,s),r},$=function(){function e(e){var t=this.element=H(e);t.appendChild(document.createTextNode("")),this.sheet=function(e){if(e.sheet)return e.sheet;for(var t=document.styleSheets,n=0,r=t.length;n<r;n++){var o=t[n];if(o.ownerNode===e)return o}j(17);}(t),this.length=0;}var t=e.prototype;return t.insertRule=function(e,t){try{return this.sheet.insertRule(t,e),this.length++,!0}catch(e){return !1}},t.deleteRule=function(e){this.sheet.deleteRule(e),this.length--;},t.getRule=function(e){var t=this.sheet.cssRules[e];return void 0!==t&&"string"==typeof t.cssText?t.cssText:""},e}(),W=function(){function e(e){var t=this.element=H(e);this.nodes=t.childNodes,this.length=0;}var t=e.prototype;return t.insertRule=function(e,t){if(e<=this.length&&e>=0){var n=document.createTextNode(t),r=this.nodes[e];return this.element.insertBefore(n,r||null),this.length++,!0}return !1},t.deleteRule=function(e){this.element.removeChild(this.nodes[e]),this.length--;},t.getRule=function(e){return e<this.length?this.nodes[e].textContent:""},e}(),U=function(){function e(e){this.rules=[],this.length=0;}var t=e.prototype;return t.insertRule=function(e,t){return e<=this.length&&(this.rules.splice(e,0,t),this.length++,!0)},t.deleteRule=function(e){this.rules.splice(e,1),this.length--;},t.getRule=function(e){return e<this.length?this.rules[e]:""},e}(),J=I,X={isServer:!I,useCSSOMInjection:!P},Z=function(){function e(e,t,n){void 0===e&&(e=E),void 0===t&&(t={}),this.options=v({},X,{},e),this.gs=t,this.names=new Map(n),this.server=!!e.isServer,!this.server&&I&&J&&(J=!1,function(e){for(var t=document.querySelectorAll(G),n=0,r=t.length;n<r;n++){var o=t[n];o&&"active"!==o.getAttribute(A)&&(Y(e,o),o.parentNode&&o.parentNode.removeChild(o));}}(this));}e.registerId=function(e){return B(e)};var t=e.prototype;return t.reconstructWithOptions=function(t,n){return void 0===n&&(n=!0),new e(v({},this.options,{},t),this.gs,n&&this.names||void 0)},t.allocateGSInstance=function(e){return this.gs[e]=(this.gs[e]||0)+1},t.getTag=function(){return this.tag||(this.tag=(n=(t=this.options).isServer,r=t.useCSSOMInjection,o=t.target,e=n?new U(o):r?new $(o):new W(o),new T(e)));var e,t,n,r,o;},t.hasNameForId=function(e,t){return this.names.has(e)&&this.names.get(e).has(t)},t.registerName=function(e,t){if(B(e),this.names.has(e))this.names.get(e).add(t);else {var n=new Set;n.add(t),this.names.set(e,n);}},t.insertRules=function(e,t,n){this.registerName(e,t),this.getTag().insertRules(B(e),n);},t.clearNames=function(e){this.names.has(e)&&this.names.get(e).clear();},t.clearRules=function(e){this.getTag().clearGroup(B(e)),this.clearNames(e);},t.clearTag=function(){this.tag=void 0;},t.toString=function(){return function(e){for(var t=e.getTag(),n=t.length,r="",o=0;o<n;o++){var s=z(o);if(void 0!==s){var i=e.names.get(s),a=t.getGroup(o);if(i&&a&&i.size){var c=A+".g"+o+'[id="'+s+'"]',u="";void 0!==i&&i.forEach((function(e){e.length>0&&(u+=e+",");})),r+=""+a+c+'{content:"'+u+'"}/*!sc*/\n';}}}return r}(this)},e}(),K=/(a)(d)/gi,Q=function(e){return String.fromCharCode(e+(e>25?39:97))};function ee(e){var t,n="";for(t=Math.abs(e);t>52;t=t/52|0)n=Q(t%52)+n;return (Q(t%52)+n).replace(K,"$1-$2")}var te=function(e,t){for(var n=t.length;n;)e=33*e^t.charCodeAt(--n);return e},ne=function(e){return te(5381,e)};function re(e){for(var t=0;t<e.length;t+=1){var n=e[t];if(b(n)&&!N(n))return !1}return !0}var oe=ne("5.3.3"),se=function(){function e(e,t,n){this.rules=e,this.staticRulesId="",this.isStatic="production"==="development",this.componentId=t,this.baseHash=te(oe,t),this.baseStyle=n,Z.registerId(t);}return e.prototype.generateAndInjectStyles=function(e,t,n){var r=this.componentId,o=[];if(this.baseStyle&&o.push(this.baseStyle.generateAndInjectStyles(e,t,n)),this.isStatic&&!n.hash)if(this.staticRulesId&&t.hasNameForId(r,this.staticRulesId))o.push(this.staticRulesId);else {var s=Ne(this.rules,e,t,n).join(""),i=ee(te(this.baseHash,s)>>>0);if(!t.hasNameForId(r,i)){var a=n(s,"."+i,void 0,r);t.insertRules(r,i,a);}o.push(i),this.staticRulesId=i;}else {for(var c=this.rules.length,u=te(this.baseHash,n.hash),l="",d=0;d<c;d++){var h=this.rules[d];if("string"==typeof h)l+=h,(u=te(u,h+d));else if(h){var p=Ne(h,e,t,n),f=Array.isArray(p)?p.join(""):p;u=te(u,f+d),l+=f;}}if(l){var m=ee(u>>>0);if(!t.hasNameForId(r,m)){var y=n(l,"."+m,void 0,r);t.insertRules(r,m,y);}o.push(m);}}return o.join(" ")},e}(),ie=/^\s*\/\/.*$/gm,ae=[":","[",".","#"];function ce(e){var t,n,r,o,s=void 0===e?E:e,i=s.options,a=void 0===i?E:i,c=s.plugins,u=void 0===c?w:c,l=new stylis_min(a),d=[],h=function(e){function t(t){if(t)try{e(t+"}");}catch(e){}}return function(n,r,o,s,i,a,c,u,l,d){switch(n){case 1:if(0===l&&64===r.charCodeAt(0))return e(r+";"),"";break;case 2:if(0===u)return r+"/*|*/";break;case 3:switch(u){case 102:case 112:return e(o[0]+r),"";default:return r+(0===d?"/*|*/":"")}case-2:r.split("/*|*/}").forEach(t);}}}((function(e){d.push(e);})),f=function(e,r,s){return 0===r&&-1!==ae.indexOf(s[n.length])||s.match(o)?e:"."+t};function m(e,s,i,a){void 0===a&&(a="&");var c=e.replace(ie,""),u=s&&i?i+" "+s+" { "+c+" }":c;return t=a,n=s,r=new RegExp("\\"+n+"\\b","g"),o=new RegExp("(\\"+n+"\\b){2,}"),l(i||!s?"":s,u)}return l.use([].concat(u,[function(e,t,o){2===e&&o.length&&o[0].lastIndexOf(n)>0&&(o[0]=o[0].replace(r,f));},h,function(e){if(-2===e){var t=d;return d=[],t}}])),m.hash=u.length?u.reduce((function(e,t){return t.name||j(15),te(e,t.name)}),5381).toString():"",m}var ue=r.createContext(),le=ue.Consumer,de=r.createContext(),he=(de.Consumer,new Z),pe=ce();function fe(){return react.exports.useContext(ue)||he}function me(){return react.exports.useContext(de)||pe}function ye(e){var t=react.exports.useState(e.stylisPlugins),n=t[0],s=t[1],c=fe(),u=react.exports.useMemo((function(){var t=c;return e.sheet?t=e.sheet:e.target&&(t=t.reconstructWithOptions({target:e.target},!1)),e.disableCSSOMInjection&&(t=t.reconstructWithOptions({useCSSOMInjection:!1})),t}),[e.disableCSSOMInjection,e.sheet,e.target]),l=react.exports.useMemo((function(){return ce({options:{prefix:!e.disableVendorPrefixes},plugins:n})}),[e.disableVendorPrefixes,n]);return react.exports.useEffect((function(){shallowequal(n,e.stylisPlugins)||s(e.stylisPlugins);}),[e.stylisPlugins]),r.createElement(ue.Provider,{value:u},r.createElement(de.Provider,{value:l},r.Children.only(e.children)))}var ve=function(){function e(e,t){var n=this;this.inject=function(e,t){void 0===t&&(t=pe);var r=n.name+t.hash;e.hasNameForId(n.id,r)||e.insertRules(n.id,r,t(n.rules,r,"@keyframes"));},this.toString=function(){return j(12,String(n.name))},this.name=e,this.id="sc-keyframes-"+e,this.rules=t;}return e.prototype.getName=function(e){return void 0===e&&(e=pe),this.name+e.hash},e}(),ge=/([A-Z])/,Se=/([A-Z])/g,we=/^ms-/,Ee=function(e){return "-"+e.toLowerCase()};function be(e){return ge.test(e)?e.replace(Se,Ee).replace(we,"-ms-"):e}var _e=function(e){return null==e||!1===e||""===e};function Ne(e,n,r,o){if(Array.isArray(e)){for(var s,i=[],a=0,c=e.length;a<c;a+=1)""!==(s=Ne(e[a],n,r,o))&&(Array.isArray(s)?i.push.apply(i,s):i.push(s));return i}if(_e(e))return "";if(N(e))return "."+e.styledComponentId;if(b(e)){if("function"!=typeof(l=e)||l.prototype&&l.prototype.isReactComponent||!n)return e;var u=e(n);return reactIs$1.exports.isElement(u)&&console.warn(_(e)+" is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details."),Ne(u,n,r,o)}var l;return e instanceof ve?r?(e.inject(r,o),e.getName(o)):e:S(e)?function e(t,n){var r,o,s=[];for(var i in t)t.hasOwnProperty(i)&&!_e(t[i])&&(Array.isArray(t[i])&&t[i].isCss||b(t[i])?s.push(be(i)+":",t[i],";"):S(t[i])?s.push.apply(s,e(t[i],i)):s.push(be(i)+": "+(r=i,null==(o=t[i])||"boolean"==typeof o||""===o?"":"number"!=typeof o||0===o||r in unitlessKeys?String(o).trim():o+"px")+";"));return n?[n+" {"].concat(s,["}"]):s}(e):e.toString()}var Ae=function(e){return Array.isArray(e)&&(e.isCss=!0),e};function Ce(e){for(var t=arguments.length,n=new Array(t>1?t-1:0),r=1;r<t;r++)n[r-1]=arguments[r];return b(e)||S(e)?Ae(Ne(g(w,[e].concat(n)))):0===n.length&&1===e.length&&"string"==typeof e[0]?e:Ae(Ne(g(e,n)))}var Ie=/invalid hook call/i,Pe=new Set,Oe=function(e,t){{var n="The component "+e+(t?' with the id of "'+t+'"':"")+" has been created dynamically.\nYou may see this warning because you've called styled inside another component.\nTo resolve this only create new StyledComponents outside of any render method and function component.",r=console.error;try{var o=!0;console.error=function(e){if(Ie.test(e))o=!1,Pe.delete(n);else {for(var t=arguments.length,s=new Array(t>1?t-1:0),i=1;i<t;i++)s[i-1]=arguments[i];r.apply(void 0,[e].concat(s));}},react.exports.useRef(),o&&!Pe.has(n)&&(console.warn(n),Pe.add(n));}catch(e){Ie.test(e.message)&&Pe.delete(n);}finally{console.error=r;}}},Re=function(e,t,n){return void 0===n&&(n=E),e.theme!==n.theme&&e.theme||t||n.theme},De=/[!"#$%&'()*+,./:;<=>?@[\\\]^`{|}~-]+/g,je=/(^-|-$)/g;function Te(e){return e.replace(De,"-").replace(je,"")}var xe=function(e){return ee(ne(e)>>>0)};function ke(e){return "string"==typeof e&&(e.charAt(0)===e.charAt(0).toLowerCase())}var Ve=function(e){return "function"==typeof e||"object"==typeof e&&null!==e&&!Array.isArray(e)},Be=function(e){return "__proto__"!==e&&"constructor"!==e&&"prototype"!==e};function ze(e,t,n){var r=e[n];Ve(t)&&Ve(r)?Me(r,t):e[n]=t;}function Me(e){for(var t=arguments.length,n=new Array(t>1?t-1:0),r=1;r<t;r++)n[r-1]=arguments[r];for(var o=0,s=n;o<s.length;o++){var i=s[o];if(Ve(i))for(var a in i)Be(a)&&ze(e,i[a],a);}return e}var Ge=r.createContext(),Le=Ge.Consumer;function Fe(e){var t=react.exports.useContext(Ge),n=react.exports.useMemo((function(){return function(e,t){if(!e)return j(14);if(b(e)){var n=e(t);return null!==n&&!Array.isArray(n)&&"object"==typeof n?n:j(7)}return Array.isArray(e)||"object"!=typeof e?j(8):t?v({},t,{},e):e}(e.theme,t)}),[e.theme,t]);return e.children?r.createElement(Ge.Provider,{value:n},e.children):null}var Ye={};function qe(e,t,n){var o=N(e),i=!ke(e),a=t.attrs,c=void 0===a?w:a,d=t.componentId,h=void 0===d?function(e,t){var n="string"!=typeof e?"sc":Te(e);Ye[n]=(Ye[n]||0)+1;var r=n+"-"+xe("5.3.3"+n+Ye[n]);return t?t+"-"+r:r}(t.displayName,t.parentComponentId):d,p=t.displayName,f=void 0===p?function(e){return ke(e)?"styled."+e:"Styled("+_(e)+")"}(e):p,g=t.displayName&&t.componentId?Te(t.displayName)+"-"+t.componentId:t.componentId||h,S=o&&e.attrs?Array.prototype.concat(e.attrs,c).filter(Boolean):c,A=t.shouldForwardProp;o&&e.shouldForwardProp&&(A=t.shouldForwardProp?function(n,r,o){return e.shouldForwardProp(n,r,o)&&t.shouldForwardProp(n,r,o)}:e.shouldForwardProp);var C,I=new se(n,g,o?e.componentStyle:void 0),P=I.isStatic&&0===c.length,O=function(e,t){return function(e,t,n,r){var o=e.attrs,i=e.componentStyle,a=e.defaultProps,c=e.foldedComponentIds,d=e.shouldForwardProp,h=e.styledComponentId,p=e.target;react.exports.useDebugValue(h);var f=function(e,t,n){void 0===e&&(e=E);var r=v({},t,{theme:e}),o={};return n.forEach((function(e){var t,n,s,i=e;for(t in b(i)&&(i=i(r)),i)r[t]=o[t]="className"===t?(n=o[t],s=i[t],n&&s?n+" "+s:n||s):i[t];})),[r,o]}(Re(t,react.exports.useContext(Ge),a)||E,t,o),y=f[0],g=f[1],S=function(e,t,n,r){var o=fe(),s=me(),i=t?e.generateAndInjectStyles(E,o,s):e.generateAndInjectStyles(n,o,s);return react.exports.useDebugValue(i),!t&&r&&r(i),i}(i,r,y,e.warnTooManyClasses),w=n,_=g.$as||t.$as||g.as||t.as||p,N=ke(_),A=g!==t?v({},t,{},g):t,C={};for(var I in A)"$"!==I[0]&&"as"!==I&&("forwardedAs"===I?C.as=A[I]:(d?d(I,index$1,_):!N||index$1(I))&&(C[I]=A[I]));return t.style&&g.style!==t.style&&(C.style=v({},t.style,{},g.style)),C.className=Array.prototype.concat(c,h,S!==h?S:null,t.className,g.className).filter(Boolean).join(" "),C.ref=w,react.exports.createElement(_,C)}(C,e,t,P)};return O.displayName=f,(C=r.forwardRef(O)).attrs=S,C.componentStyle=I,C.displayName=f,C.shouldForwardProp=A,C.foldedComponentIds=o?Array.prototype.concat(e.foldedComponentIds,e.styledComponentId):w,C.styledComponentId=g,C.target=o?e.target:e,C.withComponent=function(e){var r=t.componentId,o=function(e,t){if(null==e)return {};var n,r,o={},s=Object.keys(e);for(r=0;r<s.length;r++)n=s[r],t.indexOf(n)>=0||(o[n]=e[n]);return o}(t,["componentId"]),s=r&&r+"-"+(ke(e)?e:Te(_(e)));return qe(e,v({},o,{attrs:S,componentId:s}),n)},Object.defineProperty(C,"defaultProps",{get:function(){return this._foldedDefaultProps},set:function(t){this._foldedDefaultProps=o?Me({},e.defaultProps,t):t;}}),(Oe(f,g),C.warnTooManyClasses=function(e,t){var n={},r=!1;return function(o){if(!r&&(n[o]=!0,Object.keys(n).length>=200)){var s=t?' with the id of "'+t+'"':"";console.warn("Over 200 classes were generated for component "+e+s+".\nConsider using the attrs method, together with a style object for frequently changed styles.\nExample:\n  const Component = styled.div.attrs(props => ({\n    style: {\n      background: props.background,\n    },\n  }))`width: 100%;`\n\n  <Component />"),r=!0,n={};}}}(f,g)),C.toString=function(){return "."+C.styledComponentId},i&&hoistNonReactStatics_cjs(C,e,{attrs:!0,componentStyle:!0,displayName:!0,foldedComponentIds:!0,shouldForwardProp:!0,styledComponentId:!0,target:!0,withComponent:!0}),C}var He=function(e){return function e(t,r,o){if(void 0===o&&(o=E),!reactIs$1.exports.isValidElementType(r))return j(1,String(r));var s=function(){return t(r,o,Ce.apply(void 0,arguments))};return s.withConfig=function(n){return e(t,r,v({},o,{},n))},s.attrs=function(n){return e(t,r,v({},o,{attrs:Array.prototype.concat(o.attrs,n).filter(Boolean)}))},s}(qe,e)};["a","abbr","address","area","article","aside","audio","b","base","bdi","bdo","big","blockquote","body","br","button","canvas","caption","cite","code","col","colgroup","data","datalist","dd","del","details","dfn","dialog","div","dl","dt","em","embed","fieldset","figcaption","figure","footer","form","h1","h2","h3","h4","h5","h6","head","header","hgroup","hr","html","i","iframe","img","input","ins","kbd","keygen","label","legend","li","link","main","map","mark","marquee","menu","menuitem","meta","meter","nav","noscript","object","ol","optgroup","option","output","p","param","picture","pre","progress","q","rp","rt","ruby","s","samp","script","section","select","small","source","span","strong","style","sub","summary","sup","table","tbody","td","textarea","tfoot","th","thead","time","title","tr","track","u","ul","var","video","wbr","circle","clipPath","defs","ellipse","foreignObject","g","image","line","linearGradient","marker","mask","path","pattern","polygon","polyline","radialGradient","rect","stop","svg","text","textPath","tspan"].forEach((function(e){He[e]=He(e);}));var $e=function(){function e(e,t){this.rules=e,this.componentId=t,this.isStatic=re(e),Z.registerId(this.componentId+1);}var t=e.prototype;return t.createStyles=function(e,t,n,r){var o=r(Ne(this.rules,t,n,r).join(""),""),s=this.componentId+e;n.insertRules(s,s,o);},t.removeStyles=function(e,t){t.clearRules(this.componentId+e);},t.renderStyles=function(e,t,n,r){e>2&&Z.registerId(this.componentId+e),this.removeStyles(e,n),this.createStyles(e,t,n,r);},e}();function We(e){for(var t=arguments.length,n=new Array(t>1?t-1:0),o=1;o<t;o++)n[o-1]=arguments[o];var i=Ce.apply(void 0,[e].concat(n)),a="sc-global-"+xe(JSON.stringify(i)),u=new $e(i,a);function l(e){var t=fe(),n=me(),o=react.exports.useContext(Ge),l=react.exports.useRef(t.allocateGSInstance(a)).current;return r.Children.count(e.children)&&console.warn("The global style component "+a+" was given child JSX. createGlobalStyle does not render children."),i.some((function(e){return "string"==typeof e&&-1!==e.indexOf("@import")}))&&console.warn("Please do not use @import CSS syntax in createGlobalStyle at this time, as the CSSOM APIs we use in production do not handle it well. Instead, we recommend using a library such as react-helmet to inject a typical <link> meta tag to the stylesheet, or simply embedding it manually in your index.html <head> section for a simpler app."),t.server&&h(l,e,t,o,n),react.exports.useLayoutEffect((function(){if(!t.server)return h(l,e,t,o,n),function(){return u.removeStyles(l,t)}}),[l,e,t,o,n]),null}function h(e,t,n,r,o){if(u.isStatic)u.renderStyles(e,O,n,o);else {var s=v({},t,{theme:Re(t,r,l.defaultProps)});u.renderStyles(e,s,n,o);}}return Oe(a),r.memo(l)}function Ue(e){"undefined"!=typeof navigator&&"ReactNative"===navigator.product&&console.warn("`keyframes` cannot be used on ReactNative, only on the web. To do animation in ReactNative please use Animated.");for(var t=arguments.length,n=new Array(t>1?t-1:0),r=1;r<t;r++)n[r-1]=arguments[r];var o=Ce.apply(void 0,[e].concat(n)).join(""),s=xe(o);return new ve(s,o)}var Je=function(){function e(){var e=this;this._emitSheetCSS=function(){var t=e.instance.toString();if(!t)return "";var n=q();return "<style "+[n&&'nonce="'+n+'"',A+'="true"','data-styled-version="5.3.3"'].filter(Boolean).join(" ")+">"+t+"</style>"},this.getStyleTags=function(){return e.sealed?j(2):e._emitSheetCSS()},this.getStyleElement=function(){var t;if(e.sealed)return j(2);var n=((t={})[A]="",t["data-styled-version"]="5.3.3",t.dangerouslySetInnerHTML={__html:e.instance.toString()},t),o=q();return o&&(n.nonce=o),[r.createElement("style",v({},n,{key:"sc-0-0"}))]},this.seal=function(){e.sealed=!0;},this.instance=new Z({isServer:!0}),this.sealed=!1;}var t=e.prototype;return t.collectStyles=function(e){return this.sealed?j(2):r.createElement(ye,{sheet:this.instance},e)},t.interleaveWithNodeStream=function(e){return j(3)},e}(),Xe=function(e){var t=r.forwardRef((function(t,n){var o=react.exports.useContext(Ge),i=e.defaultProps,a=Re(t,o,i);return void 0===a&&console.warn('[withTheme] You are not using a ThemeProvider nor passing a theme prop or a theme in defaultProps in component class "'+_(e)+'"'),r.createElement(e,v({},t,{theme:a,ref:n}))}));return hoistNonReactStatics_cjs(t,e),t.displayName="WithTheme("+_(e)+")",t},Ze=function(){return react.exports.useContext(Ge)},Ke={StyleSheet:Z,masterSheet:he};"undefined"!=typeof navigator&&"ReactNative"===navigator.product&&console.warn("It looks like you've imported 'styled-components' on React Native.\nPerhaps you're looking to import 'styled-components/native'?\nRead more about this at https://www.styled-components.com/docs/basics#react-native"),"undefined"!=typeof window&&(window["__styled-components-init__"]=window["__styled-components-init__"]||0,1===window["__styled-components-init__"]&&console.warn("It looks like there are several instances of 'styled-components' initialized in this application. This may cause dynamic styles to not render properly, errors during the rehydration process, a missing theme prop, and makes your application bigger without good reason.\n\nSee https://s-c.sh/2BAXzed for more info."),window["__styled-components-init__"]+=1);
+  function y(){return (y=Object.assign||function(e){for(var t=1;t<arguments.length;t++){var n=arguments[t];for(var r in n)Object.prototype.hasOwnProperty.call(n,r)&&(e[r]=n[r]);}return e}).apply(this,arguments)}var v=function(e,t){for(var n=[e[0]],r=0,o=t.length;r<o;r+=1)n.push(t[r],e[r+1]);return n},g=function(t){return null!==t&&"object"==typeof t&&"[object Object]"===(t.toString?t.toString():Object.prototype.toString.call(t))&&!reactIs$1.exports.typeOf(t)},S=Object.freeze([]),w=Object.freeze({});function E(e){return "function"==typeof e}function b(e){return "string"==typeof e&&e||e.displayName||e.name||"Component"}function _(e){return e&&"string"==typeof e.styledComponentId}var N="undefined"!=typeof process&&void 0!==process.env&&(process.env.REACT_APP_SC_ATTR||process.env.SC_ATTR)||"data-styled",A="5.3.11",C="undefined"!=typeof window&&"HTMLElement"in window,I=Boolean("boolean"==typeof SC_DISABLE_SPEEDY?SC_DISABLE_SPEEDY:"undefined"!=typeof process&&void 0!==process.env&&(void 0!==process.env.REACT_APP_SC_DISABLE_SPEEDY&&""!==process.env.REACT_APP_SC_DISABLE_SPEEDY?"false"!==process.env.REACT_APP_SC_DISABLE_SPEEDY&&process.env.REACT_APP_SC_DISABLE_SPEEDY:void 0!==process.env.SC_DISABLE_SPEEDY&&""!==process.env.SC_DISABLE_SPEEDY?"false"!==process.env.SC_DISABLE_SPEEDY&&process.env.SC_DISABLE_SPEEDY:"production"!=="development")),P={},O={1:"Cannot create styled-component for component: %s.\n\n",2:"Can't collect styles once you've consumed a `ServerStyleSheet`'s styles! `ServerStyleSheet` is a one off instance for each server-side render cycle.\n\n- Are you trying to reuse it across renders?\n- Are you accidentally calling collectStyles twice?\n\n",3:"Streaming SSR is only supported in a Node.js environment; Please do not try to call this method in the browser.\n\n",4:"The `StyleSheetManager` expects a valid target or sheet prop!\n\n- Does this error occur on the client and is your target falsy?\n- Does this error occur on the server and is the sheet falsy?\n\n",5:"The clone method cannot be used on the client!\n\n- Are you running in a client-like environment on the server?\n- Are you trying to run SSR on the client?\n\n",6:"Trying to insert a new style tag, but the given Node is unmounted!\n\n- Are you using a custom target that isn't mounted?\n- Does your document not have a valid head element?\n- Have you accidentally removed a style tag manually?\n\n",7:'ThemeProvider: Please return an object from your "theme" prop function, e.g.\n\n```js\ntheme={() => ({})}\n```\n\n',8:'ThemeProvider: Please make your "theme" prop an object.\n\n',9:"Missing document `<head>`\n\n",10:"Cannot find a StyleSheet instance. Usually this happens if there are multiple copies of styled-components loaded at once. Check out this issue for how to troubleshoot and fix the common cases where this situation can happen: https://github.com/styled-components/styled-components/issues/1941#issuecomment-417862021\n\n",11:"_This error was replaced with a dev-time warning, it will be deleted for v4 final._ [createGlobalStyle] received children which will not be rendered. Please use the component without passing children elements.\n\n",12:"It seems you are interpolating a keyframe declaration (%s) into an untagged string. This was supported in styled-components v3, but is not longer supported in v4 as keyframes are now injected on-demand. Please wrap your string in the css\\`\\` helper which ensures the styles are injected correctly. See https://www.styled-components.com/docs/api#css\n\n",13:"%s is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details.\n\n",14:'ThemeProvider: "theme" prop is required.\n\n',15:"A stylis plugin has been supplied that is not named. We need a name for each plugin to be able to prevent styling collisions between different stylis configurations within the same app. Before you pass your plugin to `<StyleSheetManager stylisPlugins={[]}>`, please make sure each plugin is uniquely-named, e.g.\n\n```js\nObject.defineProperty(importedPlugin, 'name', { value: 'some-unique-name' });\n```\n\n",16:"Reached the limit of how many styled components may be created at group %s.\nYou may only create up to 1,073,741,824 components. If you're creating components dynamically,\nas for instance in your render method then you may be running into this limitation.\n\n",17:"CSSStyleSheet could not be found on HTMLStyleElement.\nHas styled-components' style tag been unmounted or altered by another script?\n"};function R(){for(var e=arguments.length<=0?void 0:arguments[0],t=[],n=1,r=arguments.length;n<r;n+=1)t.push(n<0||arguments.length<=n?void 0:arguments[n]);return t.forEach((function(t){e=e.replace(/%[a-z]/,t);})),e}function D(e){for(var t=arguments.length,n=new Array(t>1?t-1:0),r=1;r<t;r++)n[r-1]=arguments[r];throw new Error(R.apply(void 0,[O[e]].concat(n)).trim())}var j=function(){function e(e){this.groupSizes=new Uint32Array(512),this.length=512,this.tag=e;}var t=e.prototype;return t.indexOfGroup=function(e){for(var t=0,n=0;n<e;n++)t+=this.groupSizes[n];return t},t.insertRules=function(e,t){if(e>=this.groupSizes.length){for(var n=this.groupSizes,r=n.length,o=r;e>=o;)(o<<=1)<0&&D(16,""+e);this.groupSizes=new Uint32Array(o),this.groupSizes.set(n),this.length=o;for(var s=r;s<o;s++)this.groupSizes[s]=0;}for(var i=this.indexOfGroup(e+1),a=0,c=t.length;a<c;a++)this.tag.insertRule(i,t[a])&&(this.groupSizes[e]++,i++);},t.clearGroup=function(e){if(e<this.length){var t=this.groupSizes[e],n=this.indexOfGroup(e),r=n+t;this.groupSizes[e]=0;for(var o=n;o<r;o++)this.tag.deleteRule(n);}},t.getGroup=function(e){var t="";if(e>=this.length||0===this.groupSizes[e])return t;for(var n=this.groupSizes[e],r=this.indexOfGroup(e),o=r+n,s=r;s<o;s++)t+=this.tag.getRule(s)+"/*!sc*/\n";return t},e}(),T=new Map,x=new Map,k=1,V=function(e){if(T.has(e))return T.get(e);for(;x.has(k);)k++;var t=k++;return ((0|t)<0||t>1<<30)&&D(16,""+t),T.set(e,t),x.set(t,e),t},B=function(e){return x.get(e)},z=function(e,t){t>=k&&(k=t+1),T.set(e,t),x.set(t,e);},M="style["+N+'][data-styled-version="5.3.11"]',G=new RegExp("^"+N+'\\.g(\\d+)\\[id="([\\w\\d-]+)"\\].*?"([^"]*)'),L=function(e,t,n){for(var r,o=n.split(","),s=0,i=o.length;s<i;s++)(r=o[s])&&e.registerName(t,r);},F=function(e,t){for(var n=(t.textContent||"").split("/*!sc*/\n"),r=[],o=0,s=n.length;o<s;o++){var i=n[o].trim();if(i){var a=i.match(G);if(a){var c=0|parseInt(a[1],10),u=a[2];0!==c&&(z(u,c),L(e,u,a[3]),e.getTag().insertRules(c,r)),r.length=0;}else r.push(i);}}},Y=function(){return "undefined"!=typeof __webpack_nonce__?__webpack_nonce__:null},q=function(e){var t=document.head,n=e||t,r=document.createElement("style"),o=function(e){for(var t=e.childNodes,n=t.length;n>=0;n--){var r=t[n];if(r&&1===r.nodeType&&r.hasAttribute(N))return r}}(n),s=void 0!==o?o.nextSibling:null;r.setAttribute(N,"active"),r.setAttribute("data-styled-version","5.3.11");var i=Y();return i&&r.setAttribute("nonce",i),n.insertBefore(r,s),r},H=function(){function e(e){var t=this.element=q(e);t.appendChild(document.createTextNode("")),this.sheet=function(e){if(e.sheet)return e.sheet;for(var t=document.styleSheets,n=0,r=t.length;n<r;n++){var o=t[n];if(o.ownerNode===e)return o}D(17);}(t),this.length=0;}var t=e.prototype;return t.insertRule=function(e,t){try{return this.sheet.insertRule(t,e),this.length++,!0}catch(e){return !1}},t.deleteRule=function(e){this.sheet.deleteRule(e),this.length--;},t.getRule=function(e){var t=this.sheet.cssRules[e];return void 0!==t&&"string"==typeof t.cssText?t.cssText:""},e}(),$=function(){function e(e){var t=this.element=q(e);this.nodes=t.childNodes,this.length=0;}var t=e.prototype;return t.insertRule=function(e,t){if(e<=this.length&&e>=0){var n=document.createTextNode(t),r=this.nodes[e];return this.element.insertBefore(n,r||null),this.length++,!0}return !1},t.deleteRule=function(e){this.element.removeChild(this.nodes[e]),this.length--;},t.getRule=function(e){return e<this.length?this.nodes[e].textContent:""},e}(),W=function(){function e(e){this.rules=[],this.length=0;}var t=e.prototype;return t.insertRule=function(e,t){return e<=this.length&&(this.rules.splice(e,0,t),this.length++,!0)},t.deleteRule=function(e){this.rules.splice(e,1),this.length--;},t.getRule=function(e){return e<this.length?this.rules[e]:""},e}(),U=C,J={isServer:!C,useCSSOMInjection:!I},X=function(){function e(e,t,n){void 0===e&&(e=w),void 0===t&&(t={}),this.options=y({},J,{},e),this.gs=t,this.names=new Map(n),this.server=!!e.isServer,!this.server&&C&&U&&(U=!1,function(e){for(var t=document.querySelectorAll(M),n=0,r=t.length;n<r;n++){var o=t[n];o&&"active"!==o.getAttribute(N)&&(F(e,o),o.parentNode&&o.parentNode.removeChild(o));}}(this));}e.registerId=function(e){return V(e)};var t=e.prototype;return t.reconstructWithOptions=function(t,n){return void 0===n&&(n=!0),new e(y({},this.options,{},t),this.gs,n&&this.names||void 0)},t.allocateGSInstance=function(e){return this.gs[e]=(this.gs[e]||0)+1},t.getTag=function(){return this.tag||(this.tag=(n=(t=this.options).isServer,r=t.useCSSOMInjection,o=t.target,e=n?new W(o):r?new H(o):new $(o),new j(e)));var e,t,n,r,o;},t.hasNameForId=function(e,t){return this.names.has(e)&&this.names.get(e).has(t)},t.registerName=function(e,t){if(V(e),this.names.has(e))this.names.get(e).add(t);else {var n=new Set;n.add(t),this.names.set(e,n);}},t.insertRules=function(e,t,n){this.registerName(e,t),this.getTag().insertRules(V(e),n);},t.clearNames=function(e){this.names.has(e)&&this.names.get(e).clear();},t.clearRules=function(e){this.getTag().clearGroup(V(e)),this.clearNames(e);},t.clearTag=function(){this.tag=void 0;},t.toString=function(){return function(e){for(var t=e.getTag(),n=t.length,r="",o=0;o<n;o++){var s=B(o);if(void 0!==s){var i=e.names.get(s),a=t.getGroup(o);if(i&&a&&i.size){var c=N+".g"+o+'[id="'+s+'"]',u="";void 0!==i&&i.forEach((function(e){e.length>0&&(u+=e+",");})),r+=""+a+c+'{content:"'+u+'"}/*!sc*/\n';}}}return r}(this)},e}(),Z=/(a)(d)/gi,K=function(e){return String.fromCharCode(e+(e>25?39:97))};function Q(e){var t,n="";for(t=Math.abs(e);t>52;t=t/52|0)n=K(t%52)+n;return (K(t%52)+n).replace(Z,"$1-$2")}var ee=function(e,t){for(var n=t.length;n;)e=33*e^t.charCodeAt(--n);return e},te=function(e){return ee(5381,e)};function ne(e){for(var t=0;t<e.length;t+=1){var n=e[t];if(E(n)&&!_(n))return !1}return !0}var re=te("5.3.11"),oe=function(){function e(e,t,n){this.rules=e,this.staticRulesId="",this.isStatic="production"==="development",this.componentId=t,this.baseHash=ee(re,t),this.baseStyle=n,X.registerId(t);}return e.prototype.generateAndInjectStyles=function(e,t,n){var r=this.componentId,o=[];if(this.baseStyle&&o.push(this.baseStyle.generateAndInjectStyles(e,t,n)),this.isStatic&&!n.hash)if(this.staticRulesId&&t.hasNameForId(r,this.staticRulesId))o.push(this.staticRulesId);else {var s=_e(this.rules,e,t,n).join(""),i=Q(ee(this.baseHash,s)>>>0);if(!t.hasNameForId(r,i)){var a=n(s,"."+i,void 0,r);t.insertRules(r,i,a);}o.push(i),this.staticRulesId=i;}else {for(var c=this.rules.length,u=ee(this.baseHash,n.hash),l="",d=0;d<c;d++){var h=this.rules[d];if("string"==typeof h)l+=h,(u=ee(u,h+d));else if(h){var p=_e(h,e,t,n),f=Array.isArray(p)?p.join(""):p;u=ee(u,f+d),l+=f;}}if(l){var m=Q(u>>>0);if(!t.hasNameForId(r,m)){var y=n(l,"."+m,void 0,r);t.insertRules(r,m,y);}o.push(m);}}return o.join(" ")},e}(),se=/^\s*\/\/.*$/gm,ie=[":","[",".","#"];function ae(e){var t,n,r,o,s=void 0===e?w:e,i=s.options,a=void 0===i?w:i,c=s.plugins,u=void 0===c?S:c,l=new stylis_min(a),d=[],p=function(e){function t(t){if(t)try{e(t+"}");}catch(e){}}return function(n,r,o,s,i,a,c,u,l,d){switch(n){case 1:if(0===l&&64===r.charCodeAt(0))return e(r+";"),"";break;case 2:if(0===u)return r+"/*|*/";break;case 3:switch(u){case 102:case 112:return e(o[0]+r),"";default:return r+(0===d?"/*|*/":"")}case-2:r.split("/*|*/}").forEach(t);}}}((function(e){d.push(e);})),f=function(e,r,s){return 0===r&&-1!==ie.indexOf(s[n.length])||s.match(o)?e:"."+t};function m(e,s,i,a){void 0===a&&(a="&");var c=e.replace(se,""),u=s&&i?i+" "+s+" { "+c+" }":c;return t=a,n=s,r=new RegExp("\\"+n+"\\b","g"),o=new RegExp("(\\"+n+"\\b){2,}"),l(i||!s?"":s,u)}return l.use([].concat(u,[function(e,t,o){2===e&&o.length&&o[0].lastIndexOf(n)>0&&(o[0]=o[0].replace(r,f));},p,function(e){if(-2===e){var t=d;return d=[],t}}])),m.hash=u.length?u.reduce((function(e,t){return t.name||D(15),ee(e,t.name)}),5381).toString():"",m}var ce=r.createContext(),ue=ce.Consumer,le=r.createContext(),de=(le.Consumer,new X),he=ae();function pe(){return react.exports.useContext(ce)||de}function fe(){return react.exports.useContext(le)||he}function me(e){var t=react.exports.useState(e.stylisPlugins),n=t[0],s=t[1],c=pe(),u=react.exports.useMemo((function(){var t=c;return e.sheet?t=e.sheet:e.target&&(t=t.reconstructWithOptions({target:e.target},!1)),e.disableCSSOMInjection&&(t=t.reconstructWithOptions({useCSSOMInjection:!1})),t}),[e.disableCSSOMInjection,e.sheet,e.target]),l=react.exports.useMemo((function(){return ae({options:{prefix:!e.disableVendorPrefixes},plugins:n})}),[e.disableVendorPrefixes,n]);return react.exports.useEffect((function(){shallowequal(n,e.stylisPlugins)||s(e.stylisPlugins);}),[e.stylisPlugins]),r.createElement(ce.Provider,{value:u},r.createElement(le.Provider,{value:l},r.Children.only(e.children)))}var ye=function(){function e(e,t){var n=this;this.inject=function(e,t){void 0===t&&(t=he);var r=n.name+t.hash;e.hasNameForId(n.id,r)||e.insertRules(n.id,r,t(n.rules,r,"@keyframes"));},this.toString=function(){return D(12,String(n.name))},this.name=e,this.id="sc-keyframes-"+e,this.rules=t;}return e.prototype.getName=function(e){return void 0===e&&(e=he),this.name+e.hash},e}(),ve=/([A-Z])/,ge=/([A-Z])/g,Se=/^ms-/,we=function(e){return "-"+e.toLowerCase()};function Ee(e){return ve.test(e)?e.replace(ge,we).replace(Se,"-ms-"):e}var be=function(e){return null==e||!1===e||""===e};function _e(e,n,r,o){if(Array.isArray(e)){for(var s,i=[],a=0,c=e.length;a<c;a+=1)""!==(s=_e(e[a],n,r,o))&&(Array.isArray(s)?i.push.apply(i,s):i.push(s));return i}if(be(e))return "";if(_(e))return "."+e.styledComponentId;if(E(e)){if("function"!=typeof(l=e)||l.prototype&&l.prototype.isReactComponent||!n)return e;var u=e(n);return reactIs$1.exports.isElement(u)&&console.warn(b(e)+" is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details."),_e(u,n,r,o)}var l;return e instanceof ye?r?(e.inject(r,o),e.getName(o)):e:g(e)?function e(t,n){var r,o,s=[];for(var i in t)t.hasOwnProperty(i)&&!be(t[i])&&(Array.isArray(t[i])&&t[i].isCss||E(t[i])?s.push(Ee(i)+":",t[i],";"):g(t[i])?s.push.apply(s,e(t[i],i)):s.push(Ee(i)+": "+(r=i,null==(o=t[i])||"boolean"==typeof o||""===o?"":"number"!=typeof o||0===o||r in unitlessKeys||r.startsWith("--")?String(o).trim():o+"px")+";"));return n?[n+" {"].concat(s,["}"]):s}(e):e.toString()}var Ne=function(e){return Array.isArray(e)&&(e.isCss=!0),e};function Ae(e){for(var t=arguments.length,n=new Array(t>1?t-1:0),r=1;r<t;r++)n[r-1]=arguments[r];return E(e)||g(e)?Ne(_e(v(S,[e].concat(n)))):0===n.length&&1===e.length&&"string"==typeof e[0]?e:Ne(_e(v(e,n)))}var Ce=/invalid hook call/i,Ie=new Set,Pe=function(e,t){{var n="The component "+e+(t?' with the id of "'+t+'"':"")+" has been created dynamically.\nYou may see this warning because you've called styled inside another component.\nTo resolve this only create new StyledComponents outside of any render method and function component.",r=console.error;try{var o=!0;console.error=function(e){if(Ce.test(e))o=!1,Ie.delete(n);else {for(var t=arguments.length,s=new Array(t>1?t-1:0),i=1;i<t;i++)s[i-1]=arguments[i];r.apply(void 0,[e].concat(s));}},react.exports.useRef(),o&&!Ie.has(n)&&(console.warn(n),Ie.add(n));}catch(e){Ce.test(e.message)&&Ie.delete(n);}finally{console.error=r;}}},Oe=function(e,t,n){return void 0===n&&(n=w),e.theme!==n.theme&&e.theme||t||n.theme},Re=/[!"#$%&'()*+,./:;<=>?@[\\\]^`{|}~-]+/g,De=/(^-|-$)/g;function je(e){return e.replace(Re,"-").replace(De,"")}var Te=function(e){return Q(te(e)>>>0)};function xe(e){return "string"==typeof e&&(e.charAt(0)===e.charAt(0).toLowerCase())}var ke=function(e){return "function"==typeof e||"object"==typeof e&&null!==e&&!Array.isArray(e)},Ve=function(e){return "__proto__"!==e&&"constructor"!==e&&"prototype"!==e};function Be(e,t,n){var r=e[n];ke(t)&&ke(r)?ze(r,t):e[n]=t;}function ze(e){for(var t=arguments.length,n=new Array(t>1?t-1:0),r=1;r<t;r++)n[r-1]=arguments[r];for(var o=0,s=n;o<s.length;o++){var i=s[o];if(ke(i))for(var a in i)Ve(a)&&Be(e,i[a],a);}return e}var Me=r.createContext(),Ge=Me.Consumer;function Le(e){var t=react.exports.useContext(Me),n=react.exports.useMemo((function(){return function(e,t){if(!e)return D(14);if(E(e)){var n=e(t);return null!==n&&!Array.isArray(n)&&"object"==typeof n?n:D(7)}return Array.isArray(e)||"object"!=typeof e?D(8):t?y({},t,{},e):e}(e.theme,t)}),[e.theme,t]);return e.children?r.createElement(Me.Provider,{value:n},e.children):null}var Fe={};function Ye(e,t,n){var o=_(e),i=!xe(e),a=t.attrs,c=void 0===a?S:a,l=t.componentId,d=void 0===l?function(e,t){var n="string"!=typeof e?"sc":je(e);Fe[n]=(Fe[n]||0)+1;var r=n+"-"+Te("5.3.11"+n+Fe[n]);return t?t+"-"+r:r}(t.displayName,t.parentComponentId):l,h=t.displayName,p=void 0===h?function(e){return xe(e)?"styled."+e:"Styled("+b(e)+")"}(e):h,v=t.displayName&&t.componentId?je(t.displayName)+"-"+t.componentId:t.componentId||d,g=o&&e.attrs?Array.prototype.concat(e.attrs,c).filter(Boolean):c,N=t.shouldForwardProp;o&&e.shouldForwardProp&&(N=t.shouldForwardProp?function(n,r,o){return e.shouldForwardProp(n,r,o)&&t.shouldForwardProp(n,r,o)}:e.shouldForwardProp);var A,C=new oe(n,v,o?e.componentStyle:void 0),I=C.isStatic&&0===c.length,P=function(e,t){return function(e,t,n,r){var o=e.attrs,i=e.componentStyle,a=e.defaultProps,c=e.foldedComponentIds,l=e.shouldForwardProp,d=e.styledComponentId,h=e.target,p=function(e,t,n){void 0===e&&(e=w);var r=y({},t,{theme:e}),o={};return n.forEach((function(e){var t,n,s,i=e;for(t in E(i)&&(i=i(r)),i)r[t]=o[t]="className"===t?(n=o[t],s=i[t],n&&s?n+" "+s:n||s):i[t];})),[r,o]}(Oe(t,react.exports.useContext(Me),a)||w,t,o),m=p[0],v=p[1],g=function(e,t,n,r){var o=pe(),s=fe(),i=t?e.generateAndInjectStyles(w,o,s):e.generateAndInjectStyles(n,o,s);return !t&&r&&r(i),i}(i,r,m,e.warnTooManyClasses),S=n,b=v.$as||t.$as||v.as||t.as||h,_=xe(b),N=v!==t?y({},t,{},v):t,A={};for(var C in N)"$"!==C[0]&&"as"!==C&&("forwardedAs"===C?A.as=N[C]:(l?l(C,isPropValid,b):!_||isPropValid(C))&&(A[C]=N[C]));return t.style&&v.style!==t.style&&(A.style=y({},t.style,{},v.style)),A.className=Array.prototype.concat(c,d,g!==d?g:null,t.className,v.className).filter(Boolean).join(" "),A.ref=S,react.exports.createElement(b,A)}(A,e,t,I)};return P.displayName=p,(A=r.forwardRef(P)).attrs=g,A.componentStyle=C,A.displayName=p,A.shouldForwardProp=N,A.foldedComponentIds=o?Array.prototype.concat(e.foldedComponentIds,e.styledComponentId):S,A.styledComponentId=v,A.target=o?e.target:e,A.withComponent=function(e){var r=t.componentId,o=function(e,t){if(null==e)return {};var n,r,o={},s=Object.keys(e);for(r=0;r<s.length;r++)n=s[r],t.indexOf(n)>=0||(o[n]=e[n]);return o}(t,["componentId"]),s=r&&r+"-"+(xe(e)?e:je(b(e)));return Ye(e,y({},o,{attrs:g,componentId:s}),n)},Object.defineProperty(A,"defaultProps",{get:function(){return this._foldedDefaultProps},set:function(t){this._foldedDefaultProps=o?ze({},e.defaultProps,t):t;}}),(Pe(p,v),A.warnTooManyClasses=function(e,t){var n={},r=!1;return function(o){if(!r&&(n[o]=!0,Object.keys(n).length>=200)){var s=t?' with the id of "'+t+'"':"";console.warn("Over 200 classes were generated for component "+e+s+".\nConsider using the attrs method, together with a style object for frequently changed styles.\nExample:\n  const Component = styled.div.attrs(props => ({\n    style: {\n      background: props.background,\n    },\n  }))`width: 100%;`\n\n  <Component />"),r=!0,n={};}}}(p,v)),Object.defineProperty(A,"toString",{value:function(){return "."+A.styledComponentId}}),i&&hoistNonReactStatics_cjs(A,e,{attrs:!0,componentStyle:!0,displayName:!0,foldedComponentIds:!0,shouldForwardProp:!0,styledComponentId:!0,target:!0,withComponent:!0}),A}var qe=function(e){return function e(t,r,o){if(void 0===o&&(o=w),!reactIs$1.exports.isValidElementType(r))return D(1,String(r));var s=function(){return t(r,o,Ae.apply(void 0,arguments))};return s.withConfig=function(n){return e(t,r,y({},o,{},n))},s.attrs=function(n){return e(t,r,y({},o,{attrs:Array.prototype.concat(o.attrs,n).filter(Boolean)}))},s}(Ye,e)};["a","abbr","address","area","article","aside","audio","b","base","bdi","bdo","big","blockquote","body","br","button","canvas","caption","cite","code","col","colgroup","data","datalist","dd","del","details","dfn","dialog","div","dl","dt","em","embed","fieldset","figcaption","figure","footer","form","h1","h2","h3","h4","h5","h6","head","header","hgroup","hr","html","i","iframe","img","input","ins","kbd","keygen","label","legend","li","link","main","map","mark","marquee","menu","menuitem","meta","meter","nav","noscript","object","ol","optgroup","option","output","p","param","picture","pre","progress","q","rp","rt","ruby","s","samp","script","section","select","small","source","span","strong","style","sub","summary","sup","table","tbody","td","textarea","tfoot","th","thead","time","title","tr","track","u","ul","var","video","wbr","circle","clipPath","defs","ellipse","foreignObject","g","image","line","linearGradient","marker","mask","path","pattern","polygon","polyline","radialGradient","rect","stop","svg","text","textPath","tspan"].forEach((function(e){qe[e]=qe(e);}));var He=function(){function e(e,t){this.rules=e,this.componentId=t,this.isStatic=ne(e),X.registerId(this.componentId+1);}var t=e.prototype;return t.createStyles=function(e,t,n,r){var o=r(_e(this.rules,t,n,r).join(""),""),s=this.componentId+e;n.insertRules(s,s,o);},t.removeStyles=function(e,t){t.clearRules(this.componentId+e);},t.renderStyles=function(e,t,n,r){e>2&&X.registerId(this.componentId+e),this.removeStyles(e,n),this.createStyles(e,t,n,r);},e}();function $e(e){for(var t=arguments.length,n=new Array(t>1?t-1:0),o=1;o<t;o++)n[o-1]=arguments[o];var i=Ae.apply(void 0,[e].concat(n)),a="sc-global-"+Te(JSON.stringify(i)),u=new He(i,a);function d(e){var t=pe(),n=fe(),o=react.exports.useContext(Me),d=react.exports.useRef(t.allocateGSInstance(a)).current;return r.Children.count(e.children)&&console.warn("The global style component "+a+" was given child JSX. createGlobalStyle does not render children."),i.some((function(e){return "string"==typeof e&&-1!==e.indexOf("@import")}))&&console.warn("Please do not use @import CSS syntax in createGlobalStyle at this time, as the CSSOM APIs we use in production do not handle it well. Instead, we recommend using a library such as react-helmet to inject a typical <link> meta tag to the stylesheet, or simply embedding it manually in your index.html <head> section for a simpler app."),t.server&&h(d,e,t,o,n),react.exports.useLayoutEffect((function(){if(!t.server)return h(d,e,t,o,n),function(){return u.removeStyles(d,t)}}),[d,e,t,o,n]),null}function h(e,t,n,r,o){if(u.isStatic)u.renderStyles(e,P,n,o);else {var s=y({},t,{theme:Oe(t,r,d.defaultProps)});u.renderStyles(e,s,n,o);}}return Pe(a),r.memo(d)}function We(e){"undefined"!=typeof navigator&&"ReactNative"===navigator.product&&console.warn("`keyframes` cannot be used on ReactNative, only on the web. To do animation in ReactNative please use Animated.");for(var t=arguments.length,n=new Array(t>1?t-1:0),r=1;r<t;r++)n[r-1]=arguments[r];var o=Ae.apply(void 0,[e].concat(n)).join(""),s=Te(o);return new ye(s,o)}var Ue=function(){function e(){var e=this;this._emitSheetCSS=function(){var t=e.instance.toString();if(!t)return "";var n=Y();return "<style "+[n&&'nonce="'+n+'"',N+'="true"','data-styled-version="5.3.11"'].filter(Boolean).join(" ")+">"+t+"</style>"},this.getStyleTags=function(){return e.sealed?D(2):e._emitSheetCSS()},this.getStyleElement=function(){var t;if(e.sealed)return D(2);var n=((t={})[N]="",t["data-styled-version"]="5.3.11",t.dangerouslySetInnerHTML={__html:e.instance.toString()},t),o=Y();return o&&(n.nonce=o),[r.createElement("style",y({},n,{key:"sc-0-0"}))]},this.seal=function(){e.sealed=!0;},this.instance=new X({isServer:!0}),this.sealed=!1;}var t=e.prototype;return t.collectStyles=function(e){return this.sealed?D(2):r.createElement(me,{sheet:this.instance},e)},t.interleaveWithNodeStream=function(e){return D(3)},e}(),Je=function(e){var t=r.forwardRef((function(t,n){var o=react.exports.useContext(Me),i=e.defaultProps,a=Oe(t,o,i);return void 0===a&&console.warn('[withTheme] You are not using a ThemeProvider nor passing a theme prop or a theme in defaultProps in component class "'+b(e)+'"'),r.createElement(e,y({},t,{theme:a,ref:n}))}));return hoistNonReactStatics_cjs(t,e),t.displayName="WithTheme("+b(e)+")",t},Xe=function(){return react.exports.useContext(Me)},Ze={StyleSheet:X,masterSheet:de};"undefined"!=typeof navigator&&"ReactNative"===navigator.product&&console.warn("It looks like you've imported 'styled-components' on React Native.\nPerhaps you're looking to import 'styled-components/native'?\nRead more about this at https://www.styled-components.com/docs/basics#react-native"),"undefined"!=typeof window&&(window["__styled-components-init__"]=window["__styled-components-init__"]||0,1===window["__styled-components-init__"]&&console.warn("It looks like there are several instances of 'styled-components' initialized in this application. This may cause dynamic styles to not render properly, errors during the rehydration process, a missing theme prop, and makes your application bigger without good reason.\n\nSee https://s-c.sh/2BAXzed for more info."),window["__styled-components-init__"]+=1);
 
   var styledComponents_browser_esm = /*#__PURE__*/Object.freeze({
       __proto__: null,
-      'default': He,
-      ServerStyleSheet: Je,
-      StyleSheetConsumer: le,
-      StyleSheetContext: ue,
-      StyleSheetManager: ye,
-      ThemeConsumer: Le,
-      ThemeContext: Ge,
-      ThemeProvider: Fe,
-      __PRIVATE__: Ke,
-      createGlobalStyle: We,
-      css: Ce,
-      isStyledComponent: N,
-      keyframes: Ue,
-      useTheme: Ze,
-      version: C,
-      withTheme: Xe
+      'default': qe,
+      ServerStyleSheet: Ue,
+      StyleSheetConsumer: ue,
+      StyleSheetContext: ce,
+      StyleSheetManager: me,
+      ThemeConsumer: Ge,
+      ThemeContext: Me,
+      ThemeProvider: Le,
+      __PRIVATE__: Ze,
+      createGlobalStyle: $e,
+      css: Ae,
+      isStyledComponent: _,
+      keyframes: We,
+      useTheme: Xe,
+      version: A,
+      withTheme: Je
   });
 
   var require$$2 = /*@__PURE__*/getAugmentedNamespace(styledComponents_browser_esm);
@@ -50352,7 +50364,7 @@
     reactDom.exports = reactDom_development;
   }
 
-  /* live-cat v0.8.11 @license MIT */
+  /* live-cat v1.0.1 @license MIT */
 
   (function (module, exports) {
   (function (global, factory) {
@@ -51878,11 +51890,7 @@
       ]);
       var CroppingOptions = isIOS()
           ? [{ type: LandscapeType$1.CONTAIN }, { type: LandscapeType$1.COVER }]
-          : [
-              { type: LandscapeType$1.CONTAIN },
-              { type: LandscapeType$1.FILL },
-              { type: LandscapeType$1.COVER },
-          ];
+          : [{ type: LandscapeType$1.CONTAIN }, { type: LandscapeType$1.FILL }, { type: LandscapeType$1.COVER }];
       function CroppingModal(p) {
           var _a = __read(require$$0.useState(p.selectCropping), 2), selectCropping = _a[0], setSelectCropping = _a[1];
           require$$0.useEffect(function () {
@@ -51911,7 +51919,7 @@
               // super(hostElement, onPlay, voicedAtPlay, orientationLock, onRotate)
               _this.setupVideoStyle();
               var resizeHandler = function () {
-                  console.log('initRect', _this.initRect);
+                  // console.log('initRect', this.initRect)
                   var _a = _this.videoElement, videoWidth = _a.videoWidth, videoHeight = _a.videoHeight;
                   _this.playerShell.videoAspectRatio = videoWidth / videoHeight;
                   _this.resizePlayerToFillWindow();
@@ -51929,6 +51937,7 @@
               return _this;
           }
           Object.defineProperty(LivePlayer.prototype, "playerEle", {
+              // initRect?: playerRectType
               get: function () {
                   return this.playerElement;
               },
@@ -51972,7 +51981,7 @@
               this.videoElement.setAttribute('x5-video-player-fullscreen', 'true');
               this.videoElement.setAttribute('x5-video-orientation', 'portrait');
           };
-          LivePlayer.prototype.handleStartAction = function () {
+          LivePlayer.prototype.handleStartAction = function (isFullScreen) {
               this.mutedModal = document.createElement('div');
               this.mutedModal.style.cssText = "width:100%;height:100%;position:relative;";
               var mutedElement = document.createElement('div');
@@ -51991,6 +52000,7 @@
               this.mutedModal.addEventListener('mousedown', function resumeVoice() {
                   var _a;
                   context.hideMutedDiv();
+                  isFullScreen && rayStreaming.screenfull.request(context.playerElement);
                   (_a = context.mutedModal) === null || _a === void 0 ? void 0 : _a.removeEventListener('mousedown', resumeVoice);
               });
               /**
@@ -52003,6 +52013,32 @@
               this.mutedModal.addEventListener(touchEvent, function resumeVoice() {
                   var _a;
                   context.hideMutedDiv();
+                  isFullScreen && rayStreaming.screenfull.request(context.playerElement);
+                  (_a = context.mutedModal) === null || _a === void 0 ? void 0 : _a.removeEventListener(touchEvent, resumeVoice);
+              });
+          };
+          LivePlayer.prototype.handlerAutoScreenFull = function () {
+              this.screenFullModal = document.createElement('div');
+              this.screenFullModal.style.cssText = "width:100%;height:100%;position:relative;";
+              this.playerElement.appendChild(this.screenFullModal);
+              var context = this;
+              this.screenFullModal.addEventListener('mousedown', function resumeVoice() {
+                  var _a;
+                  rayStreaming.screenfull.request(context.playerElement);
+                  context.hideAutoScreenFulldDiv();
+                  (_a = context.mutedModal) === null || _a === void 0 ? void 0 : _a.removeEventListener('mousedown', resumeVoice);
+              });
+              /**
+               * @throws Unmuting failed and the element was paused instead because the user didn't interact with the document before.
+               * @description Chrome's bug happens. When'touchstart' or 'touchmove' event is emited, video would be paused.
+               * TODO: use 'touchstart' event totally instead(need Chrome support)
+               * @see https://developers.google.com/web/updates/2017/09/autoplay-policy-changes
+               */
+              var touchEvent = window.navigator.userAgent.indexOf('Chrome') > -1 ? 'touchend' : 'touchstart';
+              this.screenFullModal.addEventListener(touchEvent, function resumeVoice() {
+                  var _a;
+                  rayStreaming.screenfull.request(context.playerElement);
+                  context.hideAutoScreenFulldDiv();
                   (_a = context.mutedModal) === null || _a === void 0 ? void 0 : _a.removeEventListener(touchEvent, resumeVoice);
               });
           };
@@ -52015,6 +52051,7 @@
               this.resizePlayerToFillWindow();
           };
           LivePlayer.prototype.handleChangeOrientationLock = function (lock) {
+              // this.lock = lock
               this.playerShell.orientationLock = lock;
               this.resizePlayerToFillWindow();
           };
@@ -52051,6 +52088,7 @@
               }
           };
           LivePlayer.prototype.onChangePlayerCropping = function (flag) {
+              var _this = this;
               if (flag === void 0) { flag = false; }
               var width = this.hostElement.clientWidth ||
                   document.body.clientWidth ||
@@ -52061,7 +52099,7 @@
               switch (this.landscapeType) {
                   case LandscapeType$1.CONTAIN:
                       this.videoElement.style.objectFit = 'contain';
-                      this.initRect && (this.playerRect = this.initRect);
+                      window.setTimeout(function () { return (_this.playerShell.orientationLock = _this.playerShell.orientationLock); }, 100);
                       break;
                   case LandscapeType$1.FILL:
                       if (!this.playerShell.orientationLock) {
@@ -52111,6 +52149,9 @@
           };
           LivePlayer.prototype.hideMutedDiv = function () {
               this.mutedModal && (this.mutedModal.style.display = 'none');
+          };
+          LivePlayer.prototype.hideAutoScreenFulldDiv = function () {
+              this.screenFullModal && (this.screenFullModal.style.display = 'none');
           };
           /**
            * show message on overlay element
@@ -52635,12 +52676,6 @@
                       y: 16,
                   });
               };
-              // handleSetInterval = (cancel: boolean) => {
-              //   if (cancel) {
-              //     this.setInterval && clearInterval(this.setInterval)
-              //     this.handleSetInterval(false)
-              //   }
-              // }
               _this.hideLogoHander = function () {
                   //三秒后隐藏logo
                   _this.setInterval && clearInterval(_this.setInterval);
@@ -52842,37 +52877,11 @@
                   document.removeEventListener('mousemove', _this.handleTouchMove);
               };
               _this.handleTouchMove = function (e) {
-                  var _a, _b;
                   e.preventDefault();
                   if (_this.pressed) {
                       _this.showLogoHandler();
                       var clientX = e.clientX, clientY = e.clientY;
-                      // // console.log(
-                      // //   'clientX:',
-                      // //   clientX,
-                      // //   ' origin.x:',
-                      // //   this.origin.x,
-                      // //   '',
-                      // //   clientX - this.origin.x,
-                      // //   this.props.host.offsetWidth,
-                      // //   this.box.current?.clientWidth!,
-                      // // )
-                      // console.log(
-                      //   'clientY:',
-                      //   clientY,
-                      //   ' origin.y:',
-                      //   this.origin.y,
-                      //   '',
-                      //   clientY - this.origin.y,
-                      //   this.props.host.offsetHeight,
-                      //   this.box.current?.clientHeight!,
-                      // )
-                      if (clientX - _this.origin.x > 0 &&
-                          clientX + ((_a = _this.box.current) === null || _a === void 0 ? void 0 : _a.clientWidth) / 2 < _this.props.host.offsetWidth &&
-                          clientY - _this.origin.y > 0 &&
-                          clientY - _this.origin.y + ((_b = _this.box.current) === null || _b === void 0 ? void 0 : _b.clientHeight) < _this.props.host.offsetHeight) {
-                          _this.setState({ x: clientX - _this.origin.x, y: clientY - _this.origin.y });
-                      }
+                      _this.setState({ x: clientX - _this.origin.x, y: clientY - _this.origin.y });
                   }
               };
               _this.handleOutsideClick = function () {
@@ -54206,6 +54215,7 @@
                               if (rayStreaming.screenfull.isFullscreen) {
                                   rayStreaming.screenfull.exit();
                               }
+                              connection.exit();
                               connection.destory();
                               _this.player.showTextOverlay('应用已关闭');
                               reactDom.unmountComponentAtNode(_this.container);
@@ -54326,7 +54336,10 @@
               this.player = new LivePlayer(this.playerShell, hostElement, this.options.onPlay);
               this.player.setupExtendOnPlay(function () {
                   _this.phase = 'streaming-playing';
-                  _this.options.audioToastDisplay && _this.player.handleStartAction();
+                  _this.options.audioToastDisplay && _this.player.handleStartAction(_this.options.isFullScreen);
+                  !_this.options.audioToastDisplay &&
+                      _this.options.isFullScreen &&
+                      _this.player.handlerAutoScreenFull();
                   if (isTouch()) {
                       _this.player.handleChangeLandscapeType(_this.options.landscapeType);
                       //when false video will rotate to screen orientation with the same aspect ratio
@@ -54334,24 +54347,10 @@
                   }
                   _this.mounted(_this.player.video);
               });
-              var id = this.playerShell.addWidget(this.player);
-              setTimeout(function () {
-                  var dom = document.querySelector("#".concat(id));
-                  var _a = window.getComputedStyle(dom, null), top = _a.top, left = _a.left, width = _a.width, height = _a.height;
-                  _this.player.initRect = {
-                      top: +top.split('px')[0],
-                      left: +left.split('px')[0],
-                      width: +width.split('px')[0],
-                      height: +height.split('px')[0],
-                  };
-              }, 100);
               this.player.video.addEventListener('loadedmetadata', function () {
                   _this.phase = 'loaded-metadata';
               });
-              // this.player.video.addEventListener('resize', (e) => {
-              //   const { videoWidth, videoHeight } = e.target as HTMLVideoElement
-              //   this.playerShell.videoAspectRatio = videoWidth / videoHeight
-              // })
+              this.playerShell.addWidget(this.player);
               this.runningState = new rayStreaming.RunningState(rayStreaming.EventType.MouseMoveStandardization);
               rayStreaming.Logger.info('[RunningState] initialize', this.runningState);
               this.setupConnectionEvent();
@@ -54393,7 +54392,7 @@
                       loggerIndex += 1;
                       rayStreaming.DataBuffer.addData(LOGGER_STORE, 'info', "".concat(loggerIndex, ". ") + info);
                   });
-                  rayStreaming.DataBuffer.metaData = "-- live-cat version: v".concat("0.8.11", " --");
+                  rayStreaming.DataBuffer.metaData = "-- live-cat version: v".concat("1.0.1", " --");
               }
               if (!!intervalTimer) {
                   window.clearInterval(intervalTimer);
@@ -54442,6 +54441,7 @@
               this.connection.event.dataChannelConnected.on(function () { return (_this.phase = 'data-channel-open'); });
               this.connection.event.disconnect.on(function () { return _this.options.onError('disconnect'); });
               this.connection.event.afk.on(function () { return _this.options.onError('afk'); });
+              this.connection.event.kick.on(function () { return _this.options.onError('kick'); });
           };
           LauncherBase.prototype.mountVirtualControl = function () {
               var _this = this;
@@ -54574,6 +54574,7 @@
               audioToastDisplay: true,
               iceTransportPolicy: 'all',
               autoLoadingVideo: true,
+              isFullScreen: true,
               landscapeType: LandscapeType$1.CONTAIN,
               needLandscape: false,
               settingHoverButton: VirtualControlDisplayType.HideAll,
@@ -54825,6 +54826,22 @@
               }).then((response) => response.json());
           });
       }
+      getAppConfig(params) {
+          return __awaiter(this, void 0, void 0, function* () {
+              const currentParams = __rest(params, ["address"]);
+              return fetch(`${this.address}/api/3dcat/application/appConfig?${stringifyQuery(currentParams)}`, {
+                  headers: { "Content-Type": "application/json" },
+              })
+                  .then((response) => response.json())
+                  .then((res) => {
+                  if (res.result) {
+                      res.data = this.handlerAppConfig(res.data);
+                  }
+                  // console.info(`return /api/3dcat/application/appConfig`, res.data);
+                  return res;
+              });
+          });
+      }
       getPlayerUrl(params) {
           return __awaiter(this, void 0, void 0, function* () {
               const currentParams = __rest(params, ["address"]);
@@ -54834,38 +54851,9 @@
                   .then((response) => response.json())
                   .then((res) => {
                   if (res.result) {
-                      try {
-                          let search = new URL(res.data).search;
-                          let config;
-                          let configStr = new URLSearchParams(search).get("config");
-                          config = JSON.parse(decode(decodeURIComponent(configStr || "")));
-                          let { appName = "Player", horizontalLoading, verticalLoading, pcLoading, keyboardMappingConfig, toolbarLogo, loadingImage, } = config;
-                          horizontalLoading = horizontalLoading
-                              ? `${this.address}${horizontalLoading}`
-                              : "";
-                          verticalLoading = verticalLoading
-                              ? `${this.address}${verticalLoading}`
-                              : "";
-                          //pc 背景图
-                          pcLoading = pcLoading ? `${this.address}${pcLoading}` : "";
-                          toolbarLogo = toolbarLogo ? `${this.address}${toolbarLogo}` : "";
-                          loadingImage = loadingImage ? `${this.address}${loadingImage}` : "";
-                          //重写横竖屏背景，不同端切换，背景图不会变更
-                          verticalLoading = isTouch() ? verticalLoading : pcLoading;
-                          horizontalLoading = isTouch() ? horizontalLoading : pcLoading;
-                          keyboardMappingConfig =
-                              keyboardMappingConfig &&
-                                  typeof keyboardMappingConfig === "string" &&
-                                  JSON.parse(keyboardMappingConfig);
-                          res.data = Object.assign(Object.assign({}, config), { appName,
-                              keyboardMappingConfig,
-                              horizontalLoading,
-                              verticalLoading,
-                              toolbarLogo,
-                              loadingImage });
-                      }
-                      catch (_) { }
+                      res.data = this.handlerAppConfig(res.data);
                   }
+                  // console.info(`return /api/3dcat/application/playerUrl`, res.data);
                   return res;
               });
           });
@@ -54921,6 +54909,41 @@
                   headers: { "Content-Type": "application/json" },
               }).then((response) => response.json());
           });
+      }
+      handlerAppConfig(data) {
+          let res;
+          try {
+              let search = new URL(data).search;
+              let config;
+              let configStr = new URLSearchParams(search).get("config");
+              config = JSON.parse(decode(decodeURIComponent(configStr || "")));
+              let { appName = "Player", horizontalLoading, verticalLoading, pcLoading, keyboardMappingConfig, toolbarLogo, loadingImage, } = config;
+              horizontalLoading = horizontalLoading
+                  ? `${this.address}${horizontalLoading}`
+                  : "";
+              verticalLoading = verticalLoading
+                  ? `${this.address}${verticalLoading}`
+                  : "";
+              //pc 背景图
+              pcLoading = pcLoading ? `${this.address}${pcLoading}` : "";
+              toolbarLogo = toolbarLogo ? `${this.address}${toolbarLogo}` : "";
+              loadingImage = loadingImage ? `${this.address}${loadingImage}` : "";
+              //重写横竖屏背景，不同端切换，背景图不会变更
+              verticalLoading = isTouch() ? verticalLoading : pcLoading;
+              horizontalLoading = isTouch() ? horizontalLoading : pcLoading;
+              keyboardMappingConfig =
+                  keyboardMappingConfig &&
+                      typeof keyboardMappingConfig === "string" &&
+                      JSON.parse(keyboardMappingConfig);
+              res = Object.assign(Object.assign({}, config), { appName,
+                  keyboardMappingConfig,
+                  horizontalLoading,
+                  verticalLoading,
+                  toolbarLogo,
+                  loadingImage });
+          }
+          catch (_) { }
+          return res;
       }
   }
 
@@ -54994,6 +55017,7 @@
   const ErrorStateMap = new Map([
       ["disconnect", "连接已断开"],
       ["afk", "您已长时间未操作，连接已自动断开"],
+      ["kick", "当前应用已在其他页面打开"],
   ]);
 
   const StatusCode = {
@@ -55039,6 +55063,7 @@
       RESOURCES_FULL: 1019,
       no_real_name_verification: 1020,
       audit_app_is_running: 1022,
+      LOCAL_STORAGE_NOT_DISTRIBUTED: 1044,
       TOKEN_NOT_EXIST: 1101,
       NOT_IDLE_TOKEN: 1102,
       NICKNAME_EXIST: 1103,
@@ -55112,13 +55137,87 @@
       [StatusCode.NICKNAME_EXIST, "昵称已存在"],
       [StatusCode.no_real_name_verification, "需进行实名认证后，才能访问应用。"],
       [StatusCode.audit_app_is_running, "正在审核中"],
+      [StatusCode.LOCAL_STORAGE_NOT_DISTRIBUTED, "本地存储未同步完成"],
   ]);
+
+  class AutoRetry {
+      constructor(appKey) {
+          this.appKey = appKey;
+      }
+      get isOverMaxCount() {
+          var _a;
+          return ((_a = this.getRetryInfo()) === null || _a === void 0 ? void 0 : _a.count) > AutoRetry.MaxCount;
+      }
+      get isEmpty() {
+          return !window.localStorage.getItem(this.appKey);
+      }
+      clearRetryInfo() {
+          if (!this.isEmpty)
+              window.localStorage.removeItem(this.appKey);
+      }
+      initializeRetryInfo(taskId) {
+          if (this.isEmpty)
+              window.localStorage.setItem(this.appKey, `${this.appKey}-1-${taskId}`);
+      }
+      increaseRetryCount(countFlag = 1) {
+          const res = this.getRetryInfo();
+          if (res) {
+              const { appKey, count, taskId } = res;
+              console.info("count,countFlag,AutoRetry.MaxCount", count, countFlag, AutoRetry.MaxCount);
+              if (count + countFlag > AutoRetry.MaxCount) {
+                  return false;
+              }
+              window.localStorage.setItem(appKey, `${appKey}-${count + countFlag}-${taskId}`);
+              return true;
+          }
+          return false;
+      }
+      getRetryInfo() {
+          if (!this.isEmpty) {
+              const [appKey, count, taskId] = window.localStorage
+                  .getItem(this.appKey)
+                  .split("-");
+              return { appKey, count: +count, taskId: +taskId };
+          }
+          return null;
+      }
+      handlerSetTimeout(callBack, 
+      // conutDownCallBack: (countDown: number) => void,
+      delay) {
+          const { count } = this.getRetryInfo();
+          if (count > AutoRetry.MaxCount)
+              throw `over max retry count`;
+          let countDown = delay !== null && delay !== void 0 ? delay : count * AutoRetry.Power * 1000;
+          // let setIntervaler = window.setInterval(() => {
+          //   conutDownCallBack(countDown / 1000 - 1);
+          // }, 1000);
+          this.timer = window.setTimeout(() => {
+              callBack();
+              //   window.clearInterval(setIntervaler);
+          }, countDown);
+      }
+      destroy() {
+          this.timer && window.clearTimeout(this.timer);
+      }
+  }
+  AutoRetry.MaxCount = 5;
+  AutoRetry.Power = 2; //15
 
   class LauncherUI {
       constructor(baseOptions, hostElement, options) {
           this.baseOptions = baseOptions;
           this.hostElement = hostElement;
           this.options = options;
+          this.handlerNetworkChange = () => {
+              navigator.connection.removeEventListener("change", this.handlerNetworkChange);
+              console.info("切换网络了");
+              this.handlerRetryAction();
+          };
+          this.handlerOffline = () => {
+              window.removeEventListener("offline", this.handlerOffline);
+              console.info("断网了");
+              this.handlerRetryAction();
+          };
           this.waitForRunning = (taskId) => __awaiter(this, void 0, void 0, function* () {
               const res = yield this.client.status(taskId);
               return this.handerWaitForRunning(res, taskId);
@@ -55139,7 +55238,7 @@
               return yield this.waitForRunning(taskId);
           });
           this.handlerStatusSwitch = (res) => {
-              var _a, _b, _c, _d;
+              var _a, _b, _c;
               let { token = "", signaling, coturns, status, agoraServiceVerify } = res;
               switch (status) {
                   case Status.Pending:
@@ -55154,13 +55253,12 @@
                               signaling,
                           });
                       const isAutoLoadingVideo = (_c = (_b = this.options) === null || _b === void 0 ? void 0 : _b.autoLoadingVideo) !== null && _c !== void 0 ? _c : !(isWeiXin() && isIOS());
-                      console.log("isAutoLoadingVideo", (_d = this.options) === null || _d === void 0 ? void 0 : _d.autoLoadingVideo, isWeiXin() && isIOS(), !(isWeiXin() && isIOS()));
                       const options = Object.assign(Object.assign({}, this.diffServerAndDiyOptions), { autoLoadingVideo: isAutoLoadingVideo, onPhaseChange: (phase, deltaTime) => {
                               var _a;
                               ((_a = this.options) === null || _a === void 0 ? void 0 : _a.onPhaseChange) &&
                                   this.options.onPhaseChange(phase, deltaTime);
                               this.loading.changePhase(phase);
-                              if (phase === "streaming-ready" && !isAutoLoadingVideo) {
+                              if (phase === "data-channel-open" && !isAutoLoadingVideo) {
                                   autoLoadingVideo.set(false);
                                   autoLoadingVideoHandler.set(() => {
                                       var _a;
@@ -55176,6 +55274,7 @@
                               ((_a = this.options) === null || _a === void 0 ? void 0 : _a.onError) && ((_b = this.options) === null || _b === void 0 ? void 0 : _b.onError(reason));
                               this.handlerError({
                                   code: reason,
+                                  type: "connection",
                                   reason: (_c = ErrorStateMap.get(reason)) !== null && _c !== void 0 ? _c : reason,
                               });
                               //todo：may loading destory before emit error
@@ -55188,20 +55287,37 @@
                   case Status.QueueCancel:
                       this.handlerError({
                           code: Status.QueueCancel,
+                          type: "task",
                           reason: "排队已取消，请重新连接",
                       });
                       break;
                   case Status.Failed:
-                      this.handlerError({ code: Status.Failed, reason: "运行失败" });
+                      this.handlerError({
+                          code: Status.Failed,
+                          type: "task",
+                          reason: "运行失败",
+                      });
                       break;
                   case Status.NoIdle:
-                      this.handlerError({ code: Status.NoIdle, reason: "节点资源不足" });
+                      this.handlerError({
+                          code: Status.NoIdle,
+                          type: "task",
+                          reason: "节点资源不足",
+                      });
                       break;
                   case Status.Stopped:
-                      this.handlerError({ code: Status.Stopped, reason: "运行结束" });
+                      this.handlerError({
+                          code: Status.Stopped,
+                          type: "task",
+                          reason: "运行结束",
+                      });
                       break;
                   default:
-                      this.handlerError({ code: "Unknown", reason: "未知错误" });
+                      this.handlerError({
+                          code: "Unknown",
+                          type: "task",
+                          reason: "未知错误",
+                      });
                       break;
               }
           };
@@ -55210,36 +55326,58 @@
               this.extendUIOptions.onChange(cb);
           });
           this.client = new Client(baseOptions.address);
-          this.client
-              .getPlayerUrl(this.baseOptions)
-              .then((res) => __awaiter(this, void 0, void 0, function* () {
-              if (!res.result) {
-                  this.handlerError({
-                      code: res.code,
-                      reason: StatusMap.get(res.code) || res.message,
-                  });
-                  throw res.code;
-              }
-              return res.data;
-          }))
-              .then((data) => {
-              var _a;
-              this.handlerMultipleOptions(data);
-              const { taskId } = data;
-              ((_a = this.options) === null || _a === void 0 ? void 0 : _a.onTaskId) && this.options.onTaskId(taskId);
-              return taskId;
-          })
-              .then((taskId) => this.waitForRunning(taskId))
-              .then((res) => this.handlerStatusSwitch(res));
+          this.autoRetry = new AutoRetry(this.baseOptions.appKey);
+          //判断有重连重连 - 仅普通连接
+          this.handlerStart();
+      }
+      handlerRetryAction() {
+          var _a, _b;
+          const { count } = this.autoRetry.getRetryInfo();
+          (_a = this.launcherBase) === null || _a === void 0 ? void 0 : _a.player.destory();
+          (_b = this.launcherBase) === null || _b === void 0 ? void 0 : _b.playerShell.destory();
+          this.destory();
+          //重新loading
+          this.loading = new LoadingCompoent(this.hostElement, {}, (cb) => {
+              this.extendUIOptions.onChange(cb);
+          });
+          //第一次马上重连
+          if (count === 1) {
+              this.autoRetry.increaseRetryCount();
+              this.handlerStart();
+              return;
+          }
+          if (this.autoRetry.isOverMaxCount) {
+              this.loading.showLoadingText("网络连接异常，请稍后重试", false);
+              this.autoRetry.clearRetryInfo();
+              return;
+          }
+          this.loading.showLoadingText(`当前网络异常，正在尝试重连...(${count}/${AutoRetry.MaxCount})`, false);
+          const increaseRetryRes = this.autoRetry.increaseRetryCount();
+          console.log("increaseRetryRes", increaseRetryRes);
+          if (increaseRetryRes) {
+              this.handlerEntryConnetion();
+          }
+          else {
+              this.loading.showLoadingText("网络连接异常，请稍后重试", false);
+              this.autoRetry.clearRetryInfo();
+              return;
+          }
+          // this.loading.showLoadingText(
+          //   `当前网络异常，正在尝试重连...(${count}/${AutoRetry.MaxCount})`,
+          //   false
+          // );
+          // this.autoRetry.increaseRetryCount();
+          // this.handlerEntryConnetion();
       }
       handlerMultipleOptions(data) {
           var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
-          const { appName, loadingImage, horizontalLoading, verticalLoading, showCastScreenUsers, landscapeType, needLandscape, settingHoverButton, keyboardMappingConfig, inputHoverButton, token, } = data;
+          const { appName, loadingImage, horizontalLoading, verticalLoading, showCastScreenUsers, landscapeType, needLandscape, settingHoverButton, keyboardMappingConfig, inputHoverButton, token, isFullScreen, } = data;
+          console.info("data-----", data);
           document.title = appName;
           this.token = token;
           ((_a = this.options) === null || _a === void 0 ? void 0 : _a.onShowUserList) &&
               this.options.onShowUserList(showCastScreenUsers);
-          this.diffServerAndDiyOptions = Object.assign(Object.assign(Object.assign({}, liveCat_umd.exports.LauncherBase.defaultOptions), this.options), { landscapeType: ((_b = this.options) === null || _b === void 0 ? void 0 : _b.landscapeType) || landscapeType, needLandscape: ((_c = this.options) === null || _c === void 0 ? void 0 : _c.needLandscape) || needLandscape, settingHoverButton: ((_d = this.options) === null || _d === void 0 ? void 0 : _d.settingHoverButton) || settingHoverButton, keyboardMappingConfig: ((_e = this.options) === null || _e === void 0 ? void 0 : _e.keyboardMappingConfig) || keyboardMappingConfig, inputHoverButton: ((_f = this.options) === null || _f === void 0 ? void 0 : _f.inputHoverButton) || inputHoverButton });
+          this.diffServerAndDiyOptions = Object.assign(Object.assign(Object.assign({}, liveCat_umd.exports.LauncherBase.defaultOptions), this.options), { isFullScreen, landscapeType: ((_b = this.options) === null || _b === void 0 ? void 0 : _b.landscapeType) || landscapeType, needLandscape: ((_c = this.options) === null || _c === void 0 ? void 0 : _c.needLandscape) || needLandscape, settingHoverButton: ((_d = this.options) === null || _d === void 0 ? void 0 : _d.settingHoverButton) || settingHoverButton, keyboardMappingConfig: ((_e = this.options) === null || _e === void 0 ? void 0 : _e.keyboardMappingConfig) || keyboardMappingConfig, inputHoverButton: ((_f = this.options) === null || _f === void 0 ? void 0 : _f.inputHoverButton) || inputHoverButton });
           this.loading.loadingCompoent.loadingImage =
               ((_g = this.options) === null || _g === void 0 ? void 0 : _g.loadingImage) || loadingImage;
           this.loading.loadingCompoent.loadingBgImage = {
@@ -55250,15 +55388,131 @@
               ((_m = this.options) === null || _m === void 0 ? void 0 : _m.loadingImage) || loadingImage;
       }
       handlerError(err) {
+          console.info("handlerError", err, this.autoRetry.isEmpty);
+          if (!this.autoRetry.isEmpty && err.code !== "kick") {
+              this.extendUIOptions.onLoadingError({
+                  code: err.code,
+                  type: "reConnection",
+                  reason: err.reason,
+              });
+              this.loading = new LoadingCompoent(this.hostElement, {}, (cb) => {
+                  this.extendUIOptions.onChange(cb);
+              });
+              // this.destory();
+              //清空为了只重连一次
+              this.autoRetry.clearRetryInfo();
+              setTimeout(() => {
+                  console.info("重连");
+                  // this.handlerRetryAction();
+                  this.handlerStart();
+              });
+              return;
+              // if (!this.autoRetry.isOverMaxCount) {
+              //   this.handlerRetryAction();
+              //   // this.autoRetry.clearRetryInfo();
+              //   // setTimeout(() => this.handlerStart());
+              // }
+          }
           this.loading.loadingCompoent.showDefaultLoading = false;
           this.loading.showLoadingText(err.reason, false);
           this.extendUIOptions.onLoadingError({
               code: err.code,
+              type: err.type,
               reason: err.reason,
           });
       }
+      handlerEntryConnetion() {
+          this.autoRetry.handlerSetTimeout(() => {
+              //增加一次
+              // this.autoRetry.increaseRetryCount();
+              //先执行一次，倒计完定时递增
+              this.handlerStart();
+          });
+      }
+      handlerStart() {
+          try {
+              if (this.baseOptions.startType === 1 && !this.autoRetry.isEmpty) {
+                  this.startClient = this.client
+                      .getAppConfig(this.baseOptions)
+                      .then((res) => __awaiter(this, void 0, void 0, function* () {
+                      if (!res.result) {
+                          this.handlerError({
+                              code: res.code,
+                              type: "app",
+                              reason: StatusMap.get(res.code) || res.message,
+                          });
+                          throw res.code;
+                      }
+                      return res.data;
+                  }))
+                      .then((data) => {
+                      var _a;
+                      this.handlerMultipleOptions(data);
+                      const { taskId } = this.autoRetry.getRetryInfo();
+                      const { isReconnectEnabled } = data;
+                      //如果重连进去后服务器去掉了重连配置
+                      // !isReconnectEnabled && this.autoRetry.clearRetryInfo();
+                      // this.autoRetry.clearRetryInfo();
+                      if (isReconnectEnabled && this.autoRetry.isEmpty) {
+                          this.autoRetry.initializeRetryInfo(taskId);
+                      }
+                      // isReconnectEnabled && this.autoRetry.initializeRetryInfo(taskId);
+                      ((_a = this.options) === null || _a === void 0 ? void 0 : _a.onTaskId) && this.options.onTaskId(taskId);
+                      return { taskId, isReconnectEnabled };
+                  });
+              }
+              else {
+                  //正常连接
+                  this.startClient = this.client
+                      .getPlayerUrl(this.baseOptions)
+                      .then((res) => __awaiter(this, void 0, void 0, function* () {
+                      if (!res.result) {
+                          this.handlerError({
+                              code: res.code,
+                              type: "app",
+                              reason: StatusMap.get(res.code) || res.message,
+                          });
+                          throw res.code;
+                      }
+                      return res.data;
+                  }))
+                      .then((data) => {
+                      var _a;
+                      this.handlerMultipleOptions(data);
+                      const { taskId, isReconnectEnabled } = data;
+                      if (isReconnectEnabled && this.autoRetry.isEmpty) {
+                          this.autoRetry.initializeRetryInfo(taskId);
+                      }
+                      //重连配置判断：
+                      // this.autoRetry.clearRetryInfo();
+                      // isReconnectEnabled && this.autoRetry.initializeRetryInfo(taskId);
+                      ((_a = this.options) === null || _a === void 0 ? void 0 : _a.onTaskId) && this.options.onTaskId(taskId);
+                      return { taskId, isReconnectEnabled };
+                  });
+              }
+              this.startClient.then(({ taskId, isReconnectEnabled }) => {
+                  if (this.baseOptions.startType === 1 && isReconnectEnabled) {
+                      window.addEventListener("offline", this.handlerOffline);
+                      if ("connection" in navigator) {
+                          navigator.connection.addEventListener("change", this.handlerNetworkChange);
+                      }
+                  }
+                  return this.waitForRunning(taskId);
+              })
+                  .then((res) => this.handlerStatusSwitch(res))
+                  .catch((res) => {
+                  console.log("res----", res);
+              });
+          }
+          catch (error) {
+              console.log("error----", error);
+          }
+      }
       destory(text = "连接已关闭", opt = { videoScreenshot: false }) {
           var _a, _b, _c, _d;
+          navigator.connection.removeEventListener("change", this.handlerNetworkChange);
+          window.removeEventListener("offline", this.handlerOffline);
+          this.autoRetry.destroy();
           this.loading.destroy();
           (_a = this.launcherBase) === null || _a === void 0 ? void 0 : _a.player.showTextOverlay(text);
           if (opt.videoScreenshot) {
@@ -55300,7 +55554,7 @@
     let launcherUI = new LauncherUI(
       {
         address: "https://app.3dcat.live",
-        appKey: "RR8DtBxQ7t8Qp90W", //unity 多点
+        appKey: "5wBhF6hR5TLZUSgl", //unity 多点
         // appKey: "kLofk3YjeQMIILqQ", //ue 多点
       },
       container,
@@ -55356,28 +55610,5 @@
       bootstrap();
     }
   });
-
-  // window.addEventListener("DOMContentLoaded", () => {
-  //   bootstart()
-  //   loadingCompoent = new LoadingCompoent(
-  //     document.body,
-  //     {
-  //       // loadingImage:
-  //       //   "https://app-pre.3dcat.live:14431/images/3500/3843/2023/03/1641744786857791488.jpg",
-  //       loadingBgImage: {
-  //         portrait:
-  //           "https://app-pre.3dcat.live:14431/images/3500/3843/2023/03/1641744883955929088.jpg",
-  //         landscape:
-  //           "https://app-pre.3dcat.live:14431/images/3500/3843/2023/03/1641744786857791488.jpg",
-  //       },
-  //       // loadingBarImage:
-  //       //   "https://app-pre.3dcat.live:14431/images/3500/3843/2023/03/1641744786857791488.jpg",
-  //     },
-  //     (res) => {
-  //       console.log("res", res);
-  //     }
-  //   );
-  //   window.loadingCompoent = loadingCompoent;
-  // });
 
 })();
