@@ -81,10 +81,10 @@ function liveCatLirary(output) {
         banner: createBanner(liveCatLiraryPKG.name, liveCatLiraryPKG.version),
       },
     ],
-    // external: [
-    //   ...Object.keys(liveCatLiraryPKG.dependencies || {}),
-    //   ...Object.keys(liveCatLiraryPKG.peerDependencies || {}),
-    // ],
+    external: [
+      ...Object.keys(liveCatLiraryPKG.dependencies || {}),
+      ...Object.keys(liveCatLiraryPKG.peerDependencies || {}),
+    ],
     plugins: [
       ...basePluginList,
       copy({

@@ -1180,10 +1180,10 @@ listr2@^5.0.7:
     through "^2.3.8"
     wrap-ansi "^7.0.0"
 
-live-cat@^1.0.1:
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/live-cat/-/live-cat-1.0.1.tgz#cc28f115f86d1f06e4dde738efdafa9afe95204f"
-  integrity sha512-L6TC6DJFREIBiYfG+Ow1NsdI+xjK1JyT+bp9yxcnm9vMUYXDlci4goHDFkTXOKNmc82/mg3y469AkuCkPBYTYA==
+live-cat@^1.1.0:
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/live-cat/-/live-cat-1.1.1.tgz#13a1e80a5f6c856ed364be4e70baf5998ae9d488"
+  integrity sha512-cy0X05knHeDccS/UPB24ZOVFHfkqzAzd06M+q0O+1+Tt/RskmtcqiMHnk8q5GK+P9KkJMWu39qEBdIerJxdbdQ==
   dependencies:
     ray-streaming "2.20.3"
     react "^17.0.2"

@@ -117,7 +117,6 @@ export class LauncherPrivateUI {
           .then((data) => {
             const { token, id: runningId } = data;
             this.formatInitializeConfig(data);
-            // const { taskId } = data;
             this.options?.onRunningId && this.options.onRunningId(runningId);
             return { token, runningId };
           })
@@ -175,13 +174,6 @@ export class LauncherPrivateUI {
       horizontalLoading,
       verticalLoading,
       toolbarLogo,
-      // showCastScreenUsers,
-      // landscapeType,
-      // needLandscape,
-      // settingHoverButton,
-      // keyboardMappingConfig,
-      // inputHoverButton,
-      // token,
     } = data;
     this.toolbarLogo = toolbarLogo;
     this.loading.loadingCompoent.loadingImage =

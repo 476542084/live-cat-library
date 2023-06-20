@@ -20,11 +20,10 @@
 - [x] AgoraRTCVerify Component
 - [x] LauncherUI
 - [x] LauncherPrivateUI
-- [x] Client
 
 # Technologies
 
-- live-cat v1.1.0
+- live-cat v1.1.1
 - Svelte v3.57.0
 - Rollup v2.78.0
 - Typescript v4.9.5
