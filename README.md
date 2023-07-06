@@ -15,7 +15,6 @@
 # Features：
 
 - [x] Loading Component
-- [ ] FeedbackPanel Component
 - [ ] ScreenManager Component
 - [x] AgoraRTCVerify Component
 - [x] LauncherUI
@@ -23,7 +22,7 @@
 
 # Technologies
 
-- live-cat v1.1.1
+- live-cat v1.1.3
 - Svelte v3.57.0
 - Rollup v2.78.0
 - Typescript v4.9.5
@@ -47,6 +46,7 @@ interface BaseOptionsType {
   joinType?: ScreenJoinType; //only screen
   optionalParam?: string; // command line parameters
   exeParameter?: string; // command line parameters for privatization
+  enableVirtualCamera?: boolean; // setup camera enable
 }
 ```
 
@@ -97,7 +97,7 @@ interface LoadingError {
   reason: string | ErrorState;
 }
 
-type ErrorState = "disconnect" | "afk" | "kick";
+type ErrorState = "disconnect" | "afk" | "kick" | "hangup";
 
 interface OnRunningOptions {
   token: string;
@@ -126,6 +126,39 @@ onPhaseChange: (phase: Phase, deltaTime: number) => {
     );
   }
 };
+```
+
+```typescript
+//Microphone
+
+//Start capture audio to node
+onPhaseChange: (phase: Phase, deltaTime: number) => {
+  if (phase === "data-channel-open") {
+    launcher?.launcherBase?.openMicrophone();
+  }
+};
+//Stop
+launcher?.launcherBase?.closeMicrophone();
+```
+
+```typescript
+//Camera
+const baseOptionsType = {
+  address: "https://app.3dcat.live",
+  appKey: "xxxx",
+  startType: 1,
+  enableVirtualCamera: true,
+};
+let launcher = new LauncherUI(baseOptionsType, container);
+
+//Start capture video to node
+onPhaseChange: (phase: Phase, deltaTime: number) => {
+  if (phase === "data-channel-open") {
+    launcher?.launcherBase?.openCamera();
+  }
+};
+//Stop
+launcher?.launcherBase?.closeCamera();
 ```
 
 ```typescript

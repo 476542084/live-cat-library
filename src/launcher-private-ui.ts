@@ -91,7 +91,7 @@ export class LauncherPrivateUI {
         if (!res.result) {
           this.handlerError({
             code: res.code,
-            reason: StatusMap.get(res.code) || res.message,
+            reason: StatusMap.get(res.code)![1] ?? res.message,
           });
           throw res.code;
         }
@@ -108,7 +108,7 @@ export class LauncherPrivateUI {
             if (!res.result) {
               this.handlerError({
                 code: res.code,
-                reason: StatusMap.get(res.code) || res.message,
+                reason: StatusMap.get(res.code)![1] ?? res.message,
               });
               throw res.code;
             }
@@ -169,12 +169,8 @@ export class LauncherPrivateUI {
   }
 
   private handlerMultipleOptions(data: DesignInfo) {
-    const {
-      loadingImage,
-      horizontalLoading,
-      verticalLoading,
-      toolbarLogo,
-    } = data;
+    const { loadingImage, horizontalLoading, verticalLoading, toolbarLogo } =
+      data;
     this.toolbarLogo = toolbarLogo;
     this.loading.loadingCompoent.loadingImage =
       this.options?.loadingImage || loadingImage!;
@@ -287,7 +283,7 @@ export class LauncherPrivateUI {
     });
   }
 
-  protected destory(
+  destory(
     text: string = "连接已关闭",
     opt: { videoScreenshot: boolean } = { videoScreenshot: false }
   ) {

@@ -2,7 +2,8 @@ import commonjs from "@rollup/plugin-commonjs";
 import resolve from "@rollup/plugin-node-resolve";
 import replace from "@rollup/plugin-replace";
 const index = {
-  input: "index.js",
+  // input: "index.js",
+  input: "index-loading.js",
   output: {
     file: "public/index-bundle.js",
     format: "iife",

@@ -508,6 +508,11 @@ content-disposition@0.5.2:
   resolved "https://registry.yarnpkg.com/content-disposition/-/content-disposition-0.5.2.tgz#0cf68bb9ddf5f2be7961c3a85178cb85dba78cb4"
   integrity sha512-kRGRZw3bLlFISDBgwTSA1TMBFN6J6GWDeubmDE3AF+3+yXL8hTWv8r5rkLbqYXY4RjPk/EzHnClI3zQf1cFmHA==
 
+countup.js@^2.6.0:
+  version "2.7.0"
+  resolved "https://registry.yarnpkg.com/countup.js/-/countup.js-2.7.0.tgz#a5521bd935f0ae83417d0128e73f2a2d2543c9c7"
+  integrity sha512-IP9nYLGgW//0If73eXQdFlReGhpFGHaStqB1v82FknxnUWueF6HFuuOXySW4sEDMc88PsZL1EOn/NPkfTZalmQ==
+
 cross-spawn@^6.0.5:
   version "6.0.5"
   resolved "https://registry.yarnpkg.com/cross-spawn/-/cross-spawn-6.0.5.tgz#4a5ec7c64dfae22c3a14124dbacdee846d80cbc4"
@@ -1046,6 +1051,11 @@ isexe@^2.0.0:
   resolved "https://registry.yarnpkg.com/isexe/-/isexe-2.0.0.tgz#e8fbf374dc556ff8947a10dcb0572d633f2cfa10"
   integrity sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw==
 
+js-base64@^3.7.5:
+  version "3.7.5"
+  resolved "https://registry.yarnpkg.com/js-base64/-/js-base64-3.7.5.tgz#21e24cf6b886f76d6f5f165bfcd69cc55b9e3fca"
+  integrity sha512-3MEt5DTINKqfScXKfJFrRbxkrnk2AxPWGBL/ycjz4dK8iqiSJ06UxD8jh8xuh6p10TX4t2+7FsBYVxxQbMg+qA==
+
 "js-tokens@^3.0.0 || ^4.0.0", js-tokens@^4.0.0:
   version "4.0.0"
   resolved "https://registry.yarnpkg.com/js-tokens/-/js-tokens-4.0.0.tgz#19203fb59991df98e3a287050d4647cdeaf32499"
@@ -1066,12 +1076,21 @@ json-schema-traverse@^1.0.0:
   resolved "https://registry.yarnpkg.com/json-schema-traverse/-/json-schema-traverse-1.0.0.tgz#ae7bcb3656ab77a73ba5c49bf654f38e6b6860e2"
   integrity sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug==
 
-live-cat@^1.1.0:
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/live-cat/-/live-cat-1.1.0.tgz#1be58e22f2f2dd3a6cf7dfab0e8f709234f694d2"
-  integrity sha512-wmHnXHDgPzQA5odMSjepc5+SWTaXxU1BMvALoI3B8rHkUNr4A6UImu1n7AT4p2wEvbGhc41U/G6yNeAmarP/bQ==
+live-cat-library@^0.2.3:
+  version "0.2.3"
+  resolved "https://registry.yarnpkg.com/live-cat-library/-/live-cat-library-0.2.3.tgz#1ec226a5924b3a9d42bdbc9fb2fe8c2c7b84b4aa"
+  integrity sha512-0RpTfL1I65/ge5zncMTEAC/m+HMwc4rN92T7wCwrzz+dnpzeiWPzhrVLruTLEGUgvQTR/zZ434EbyNTQVQNoPw==
   dependencies:
-    ray-streaming "2.20.3"
+    countup.js "^2.6.0"
+    js-base64 "^3.7.5"
+    live-cat "^1.1.2"
+
+live-cat@^1.1.1, live-cat@^1.1.2:
+  version "1.1.2"
+  resolved "https://registry.yarnpkg.com/live-cat/-/live-cat-1.1.2.tgz#413a83c6eee27436ea0e16b9fb0f1b421464d7b5"
+  integrity sha512-qKz9qQMFx6XwcwvjWo5//bJ4TBcHpLsRoGYSimnLw/d998gGJcDkpTWixnVB3wG9ZfAVIaJWwZWooIJi/9hSzA==
+  dependencies:
+    ray-streaming "2.20.5"
     react "^17.0.2"
     react-dom "^17.0.2"
     resize-observer-polyfill "^1.5.1"
@@ -1341,10 +1360,10 @@ range-parser@1.2.0:
   resolved "https://registry.yarnpkg.com/range-parser/-/range-parser-1.2.0.tgz#f49be6b487894ddc40dcc94a322f611092e00d5e"
   integrity sha512-kA5WQoNVo4t9lNx2kQNFCxKeBl5IbbSNBl1M/tLkw9WCn+hxNBAW5Qh8gdhs63CJnhjJ2zQWFoqPJP2sK1AV5A==
 
-ray-streaming@2.20.3:
-  version "2.20.3"
-  resolved "https://registry.yarnpkg.com/ray-streaming/-/ray-streaming-2.20.3.tgz#6658e968f5ea0a9e62f11aea80c06697bc8f2036"
-  integrity sha512-Fiu8hK62ljYjWfaHpG5r5HuLxUPJ1Qa1OJNPGtXtEGH0UMNnlvEmWseRi4DQo1nvlea4HbaZrmyecbQinpe4jA==
+ray-streaming@2.20.5:
+  version "2.20.5"
+  resolved "https://registry.yarnpkg.com/ray-streaming/-/ray-streaming-2.20.5.tgz#7d38ec71c11e0977ee23cf9251d9d830a14c75e9"
+  integrity sha512-inBLfqePEtcQCdJM2uULvfaBBhcQcORaFeRM1S8k7+D67+xONEfhaTBfGWx4/153FEPK8f4A/IC65WvMp7yUzA==
   dependencies:
     resize-observer-polyfill "^1.5.1"
     rxjs "^7.4.0"

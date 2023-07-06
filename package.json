@@ -1,6 +1,6 @@
 {
   "name": "live-cat-library",
-   "version": "0.2.2",
+   "version": "0.2.4",
   "description": "This is a component library for [3DCAT](https://www.3dcat.live/)",
   "types": "./src",
   "main": "./live-cat-library.cjs.js",
@@ -42,20 +42,17 @@
     "tslib": "^2.5.0",
     "typescript": "4.9.5"
   },
-  "engines": {
-    "node": ">12 <=14"
-  },
   "lint-staged": {
     "*.{ts,js,css,md,html,svelte}": "prettier --write"
   },
   "dependencies": {
     "countup.js": "^2.6.0",
     "js-base64": "^3.7.5",
-    "live-cat": "^1.1.0"
+    "live-cat": "^1.1.3"
   },
   "peerDependencies": {
     "countup.js": "^2.6.0",
     "js-base64": "^3.7.5",
-    "live-cat": "^1.1.1"
+    "live-cat": "^1.1.3"
   }
 }

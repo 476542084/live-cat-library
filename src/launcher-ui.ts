@@ -72,7 +72,6 @@ export class LauncherUI {
   private diffServerAndDiyOptions?: Options;
   private autoRetry: AutoRetry;
   private isReconnectEnabled: boolean = false;
-  private taskId?: number;
   private offline: boolean = false;
   private tempOption?: InitializeConfigType;
   constructor(
@@ -195,27 +194,27 @@ export class LauncherUI {
     this.diffServerAndDiyOptions = {
       ...LauncherBase.defaultOptions,
       ...this.options,
-      isFullScreen: this.options?.isFullScreen || isFullScreen!,
-      openMicrophone: this.options?.openMicrophone || openMicrophone!,
-      landscapeType: this.options?.landscapeType || landscapeType!,
-      needLandscape: this.options?.needLandscape || needLandscape!,
+      isFullScreen: this.options?.isFullScreen ?? isFullScreen!,
+      openMicrophone: this.options?.openMicrophone ?? openMicrophone!,
+      landscapeType: this.options?.landscapeType ?? landscapeType!,
+      needLandscape: this.options?.needLandscape ?? needLandscape!,
       settingHoverButton:
-        this.options?.settingHoverButton || settingHoverButton!,
+        this.options?.settingHoverButton ?? settingHoverButton!,
       keyboardMappingConfig:
-        this.options?.keyboardMappingConfig || keyboardMappingConfig!,
-      inputHoverButton: this.options?.inputHoverButton || inputHoverButton!,
+        this.options?.keyboardMappingConfig ?? keyboardMappingConfig!,
+      inputHoverButton: this.options?.inputHoverButton ?? inputHoverButton!,
     };
 
     this.loading.loadingCompoent.loadingImage =
-      this.options?.loadingImage || loadingImage!;
+      this.options?.loadingImage ?? loadingImage!;
 
     this.loading.loadingCompoent.loadingBgImage = {
-      portrait: this.options?.loadingBgImage?.portrait || verticalLoading!,
-      landscape: this.options?.loadingBgImage?.landscape || horizontalLoading!,
+      portrait: this.options?.loadingBgImage?.portrait ?? verticalLoading!,
+      landscape: this.options?.loadingBgImage?.landscape ?? horizontalLoading!,
     };
 
     this.loading.loadingCompoent.loadingBarImage =
-      this.options?.loadingImage || loadingImage!;
+      this.options?.loadingImage ?? loadingImage!;
 
     this.loading.loadingCompoent.showDefaultLoading =
       this.options?.showDefaultLoading ?? true;
@@ -269,7 +268,9 @@ export class LauncherUI {
         const options = {
           ...this.diffServerAndDiyOptions,
           autoLoadingVideo: isAutoLoadingVideo,
+          startType: this.baseOptions.startType,
           onQuit: () => {
+            this.options?.onQuit && this.options.onQuit();
             //主动退出，清除taskId缓存
             this.autoRetry.clearRetryInfo();
           },
@@ -324,21 +325,21 @@ export class LauncherUI {
         this.handlerError({
           code: Status.QueueCancel,
           type: "task",
-          reason: "排队已取消，请重新连接",
+          reason: "取消排队等待",
         });
         break;
       case Status.Failed:
         this.handlerError({
           code: Status.Failed,
           type: "task",
-          reason: "运行失败",
+          reason: "应用运行失败",
         });
         break;
       case Status.NoIdle:
         this.handlerError({
           code: Status.NoIdle,
           type: "task",
-          reason: "节点资源不足",
+          reason: "没有空闲节点",
         });
         break;
       case Status.Stopped:
@@ -361,8 +362,7 @@ export class LauncherUI {
     if (
       this.isReconnectEnabled &&
       !this.autoRetry.isEmpty &&
-      err.type === "connection" &&
-      err.code === "disconnect"
+      err.type !== "connection"
     ) {
       //在网络不稳定/断网的情况下，需要对重连进行适配
       this.offline = true; //设定为断网
@@ -468,7 +468,7 @@ export class LauncherUI {
               this.handlerError({
                 code: res.code,
                 type: "app",
-                reason: StatusMap.get(res.code) || res.message,
+                reason: StatusMap.get(res.code)![1] ?? res.message,
               });
               throw res.code;
             }
@@ -484,7 +484,6 @@ export class LauncherUI {
             }
             this.isReconnectEnabled = isReconnectEnabled;
 
-            this.taskId = taskId;
             this.options?.onTaskId && this.options.onTaskId(taskId);
             return { taskId, isReconnectEnabled };
           });
@@ -497,7 +496,7 @@ export class LauncherUI {
               this.handlerError({
                 code: res.code,
                 type: "app",
-                reason: StatusMap.get(res.code) || res.message,
+                reason: StatusMap.get(res.code)![1] ?? res.message,
               });
               throw res.code;
             }
@@ -506,14 +505,13 @@ export class LauncherUI {
           .then((data) => {
             this.handlerMultipleOptions(data);
             const { taskId, isReconnectEnabled } = data;
-            if (isReconnectEnabled) {
+            if (isReconnectEnabled && this.baseOptions.startType === 1) {
               this.autoRetry.initializeRetryInfo(taskId);
             }
 
             //重连配置判断：
 
             this.isReconnectEnabled = isReconnectEnabled;
-            this.taskId = taskId;
             this.options?.onTaskId && this.options.onTaskId(taskId);
             return { taskId, isReconnectEnabled };
           });
@@ -544,7 +542,7 @@ export class LauncherUI {
     }
   }
 
-  protected destory(
+  destory(
     text: string = "连接已关闭",
     opt: { videoScreenshot: boolean } = { videoScreenshot: false }
   ) {

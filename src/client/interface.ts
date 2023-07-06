@@ -107,6 +107,7 @@ export interface BaseOptionsType {
   joinType?: ScreenJoinType; //only screen
   optionalParam?: string; // command line parameters
   exeParameter?: string; // command line parameters for privatization
+  enableVirtualCamera?: boolean;
 }
 export interface ExtendOptionType {
   maxBitrate?: number;
